@@ -1,0 +1,122 @@
+definitions:
+  models.AnotherTry:
+    properties:
+      create_at:
+        type: string
+      custom_signed_by:
+        type: string
+      remarks:
+        type: string
+      signed_by:
+        type: string
+      signed_on:
+        type: boolean
+      signoff_date:
+        type: string
+      signoff_time:
+        type: string
+      signon_date:
+        type: string
+      signon_time:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        example: Invalid request body
+        type: string
+    type: object
+  models.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  title: InstaPay
+  version: 1.16.2
+paths:
+  /13:
+    post:
+      consumes:
+      - application/json
+      description: Inserts user data into the trytable and provides a response message.
+      operationId: Post-Pays
+      parameters:
+      - description: JSON request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnotherTry'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AnotherTry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Check if the user is online or offline based on input parameters.
+  /delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific user in the database by their ID.
+      parameters:
+      - description: User ID to delete
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a user by ID
+  /update/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a specific user in the database by their ID.
+      parameters:
+      - description: User ID to update
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User object to update
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a user by ID
+swagger: "2.0"
