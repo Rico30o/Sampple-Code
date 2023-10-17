@@ -48,5 +48,6 @@ func SetupRoutes(app *fiber.App) {
 	app.Post("/try12", handlers.SignOn)
 	app.Post("/11", handlers.Notif_status)
 	app.Post("/13", handlers.Pays)
+	app.Get("/routines", handlers.GetOnlineRecords)
 
 }

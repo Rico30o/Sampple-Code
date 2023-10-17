@@ -595,3 +595,63 @@ func Pays(c *fiber.Ctx) error {
 		"message": "Data inserted successfully",
 	})
 }
+func GetOnlineRecords(c *fiber.Ctx) error {
+	// Channel to receive results from goroutines
+	resultCh := make(chan models.AnotherTry, 10) // Adjust the buffer size as needed
+
+	// Query the database concurrently
+	go func() {
+		// Query the database to fetch records where Signed_on is true
+		rows, err := db.DB.Debug().Table("routines").Where("signed_on = ?", true).Rows()
+		if err != nil {
+			// Handle the error if the database query fails
+			fmt.Println("Error fetching data:", err)
+			close(resultCh)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var record models.AnotherTry
+			if err := db.DB.ScanRows(rows, &record); err != nil {
+				// Handle the error if scanning fails
+				fmt.Println("Error scanning row:", err)
+				continue
+			}
+			resultCh <- record
+		}
+
+		close(resultCh)
+	}()
+
+	// Create a slice to collect the fetched records
+	var fetchedRecords []models.AnotherTry
+
+	// Process the results
+	for record := range resultCh {
+		// Optionally process the fetched records
+		fmt.Printf("Fetched record: %+v\n", record)
+		// You can do something with the fetched records, for example, add them to a slice
+		fetchedRecords = append(fetchedRecords, record)
+
+		// Insert the fetched record into a different table, assuming you have a different model for insertion
+		insertRecord := models.InsertedRecord{
+			Signed_on: record.Signed_on,
+			Signed_by: record.Signed_by,
+			Create_at: record.Create_at,
+			// Add other fields as needed
+		}
+
+		// Assuming you have a function to insert records
+		if err := db.DB.Model(&insertRecord).Create(&insertRecord).Error; err != nil {
+			fmt.Println("Error inserting record:", err)
+			// Handle the error as needed
+		}
+	}
+
+	// Return the fetched records as JSON in the response
+	return c.JSON(fiber.Map{
+		"message": "Data fetched and inserted successfully",
+		"records": fetchedRecords,
+	})
+}

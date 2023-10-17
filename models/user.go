@@ -142,4 +142,9 @@ type (
 	ErrorResponse struct {
 		Error string `json:"error" example:"Invalid request body"`
 	}
+	InsertedRecord struct {
+		Signed_on bool      `json:"signed_on"`
+		Signed_by string    `json:"signed_by"`
+		Create_at time.Time `json:"create_at"`
+	}
 )
