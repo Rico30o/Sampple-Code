@@ -147,4 +147,25 @@ type (
 		Signed_by string    `json:"signed_by"`
 		Create_at time.Time `json:"create_at"`
 	}
+	TransactionRequest struct {
+		ResponseCode           string  `json:"responseCode"`
+		Description            string  `json:"description"`
+		CreditAccount          string  `json:"creditAccount"`
+		DebitAccount           string  `json:"debitAccount"`
+		CustomerName           string  `json:"customerName"`
+		AccountName            string  `json:"accountName"`
+		ReferenceNumber        string  `json:"referenceNumber"`
+		Amount                 float64 `json:"amount"`
+		AdminFee               string  `json:"adminFee"`
+		Reff                   string  `json:"reff"`
+		CoreReference          string  `json:"coreReference"`
+		SourceBranchCode       string  `json:"sourceBranchCode"`
+		DestinationBranchCode  string  `json:"destinationBranchCode"`
+		SourceProductCode      string  `json:"sourceProductCode"`
+		DestinationProductCode string  `json:"destinationProductCode"`
+		DebitCurrency          string  `json:"debitCurrency"`
+		CreditCurrency         string  `json:"creditCurrency"`
+		AvailableBalance       string  `json:"availableBalance"`
+		ArNumber               string  `json:"arNumber"`
+	}
 )

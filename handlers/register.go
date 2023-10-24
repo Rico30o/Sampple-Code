@@ -592,7 +592,7 @@ func Pays(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "Data inserted successfully",
+		"message": notif.Signed_on,
 	})
 }
 func GetOnlineRecords(c *fiber.Ctx) error {
@@ -622,6 +622,7 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 		}
 
 		close(resultCh)
+
 	}()
 
 	// Create a slice to collect the fetched records
@@ -654,4 +655,10 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 		"message": "Data fetched and inserted successfully",
 		"records": fetchedRecords,
 	})
+}
+
+func Transfer_Credits(c *fiber.Ctx) error {
+
+	return nil
+
 }
