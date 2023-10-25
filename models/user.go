@@ -168,4 +168,26 @@ type (
 		AvailableBalance       string  `json:"availableBalance"`
 		ArNumber               string  `json:"arNumber"`
 	}
+	TransferRequest struct {
+		ReferenceNumber string  `json:"referenceNumber"`
+		CreditAccount   string  `json:"creditAccount"`
+		DebitAccount    string  `json:"debitAccount"`
+		Description     string  `json:"description"`
+		Amount          float64 `json:"amount"`
+		AdminFee        float64 `json:"adminFee"`
+	}
+
+	TransferResponse struct {
+		ResponseCode          string  `json:"responseCode"`
+		Description           string  `json:"description"`
+		CreditAccount         string  `json:"creditAccount"`
+		DebitAccount          string  `json:"debitAccount"`
+		ReferenceNumber       string  `json:"referenceNumber"`
+		CreditName            string  `json:"creditName"`
+		ProductCode           string  `json:"productCode"`
+		ProductName           string  `json:"productName"`
+		DestinationBranchCode string  `json:"destinationBranchCode"`
+		Amount                float64 `json:"amount"`
+		InactiveMarker        string  `json:"inactiveMarker"`
+	}
 )

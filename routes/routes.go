@@ -10,7 +10,7 @@ import (
 
 func SetupRoutes(app *fiber.App) {
 	//swagger routes
-	app.Get("/InstaPay_docs/*", swagger.HandlerDefault)
+	app.Get("/InstaPay-docs*", swagger.HandlerDefault)
 
 	apiEndpoint := app.Group("/api")
 	v1Endpoint := apiEndpoint.Group("/v1")
@@ -44,5 +44,6 @@ func SetupRoutes(app *fiber.App) {
 	app.Post("/11", handlers.Notif_status)
 	fdsapEndpoint.Post("/SignedOn", handlers.Pays)
 	fdsapEndpoint.Get("/routines", handlers.GetOnlineRecords)
+	fdsapEndpoint.Post("/credits", handlers.CreditsTransfer)
 
 }

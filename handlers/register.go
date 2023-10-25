@@ -499,7 +499,6 @@ func Notif_status(c *fiber.Ctx) error {
 }
 
 // Pays handles the POST request to insert data into the trytable.
-//
 // @Summary Check if the user is online or offline based on input parameters.
 // @Description Inserts user data into the trytable and provides a response message.
 // @ID Post-Pays
@@ -508,7 +507,7 @@ func Notif_status(c *fiber.Ctx) error {
 // @Param request body models.AnotherTry true "JSON request body"
 // @Success 200 {object} models.AnotherTry
 // @Failure 400 {object} models.ErrorResponse
-// @Router /13 [post]
+// @Router /SignedOn [post]
 func Pays(c *fiber.Ctx) error {
 	// Parse the JSON body from the request
 	var requestBody struct {
@@ -640,7 +639,6 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 			Signed_on: record.Signed_on,
 			Signed_by: record.Signed_by,
 			Create_at: record.Create_at,
-			// Add other fields as needed
 		}
 
 		// Assuming you have a function to insert records
@@ -657,8 +655,42 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 	})
 }
 
-func Transfer_Credits(c *fiber.Ctx) error {
+func CreditsTransfer(c *fiber.Ctx) error {
 
-	return nil
+	// Parse the JSON request body into a TransferRequest struct
+	var request models.TransferRequest
+	if err := c.BodyParser(&request); err != nil {
+		log.Printf("Errorrequest body: %v", err)
+		return c.JSON(fiber.Map{"error": "Invalid request format"})
+	}
 
+	// Validate the transfer request
+	if request.ReferenceNumber == "" {
+		return c.JSON(fiber.Map{"error": "Reference number is required"})
+	}
+
+	if request.CreditAccount == "" {
+		return c.JSON(fiber.Map{"error": "Credit account is required"})
+	}
+
+	if request.DebitAccount == "" {
+		return c.JSON(fiber.Map{"error": "Debit account is required"})
+	}
+
+	response := models.TransferResponse{
+		ResponseCode:          "00",
+		Description:           "Fund Transfer",
+		CreditAccount:         request.CreditAccount,
+		DebitAccount:          request.DebitAccount,
+		ReferenceNumber:       request.ReferenceNumber,
+		CreditName:            "nil", // Set to nil for null values
+		ProductCode:           "nil", // Set to nil for null values
+		ProductName:           "nil", // Set to nil for null values
+		DestinationBranchCode: "PH1030001",
+		Amount:                request.Amount,
+		InactiveMarker:        "nil", // Set to nil for null values
+	}
+
+	// Respond with the transfer response
+	return c.JSON(response)
 }
