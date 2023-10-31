@@ -36,14 +36,23 @@ func SetupRoutes(app *fiber.App) {
 	app.Post("try", handlers.Sample)
 	////instaPAy//
 	app.Post("/insta", handlers.AdmnSignOnReq)
+
 	app.Post("/insta-pay", handlers.AdmnSignOnReq)
 	//////HAHAHHAHAH/////////
 	app.Post("/signof", handlers.SignOffReq)
-	app.Get("/read", handlers.CheckInstaPaySign)
+
+	fdsapEndpoint.Get("/read", handlers.CheckInstaPaySign)
+
 	app.Post("/try12", handlers.SignOn)
+
 	app.Post("/11", handlers.Notif_status)
+
 	fdsapEndpoint.Post("/SignedOn", handlers.Pays)
+
 	fdsapEndpoint.Get("/routines", handlers.GetOnlineRecords)
+
 	fdsapEndpoint.Post("/credits", handlers.CreditsTransfer)
+
+	fdsapEndpoint.Post("/transfer", handlers.TransCredit)
 
 }

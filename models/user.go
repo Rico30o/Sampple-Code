@@ -147,27 +147,6 @@ type (
 		Signed_by string    `json:"signed_by"`
 		Create_at time.Time `json:"create_at"`
 	}
-	TransactionRequest struct {
-		ResponseCode           string  `json:"responseCode"`
-		Description            string  `json:"description"`
-		CreditAccount          string  `json:"creditAccount"`
-		DebitAccount           string  `json:"debitAccount"`
-		CustomerName           string  `json:"customerName"`
-		AccountName            string  `json:"accountName"`
-		ReferenceNumber        string  `json:"referenceNumber"`
-		Amount                 float64 `json:"amount"`
-		AdminFee               string  `json:"adminFee"`
-		Reff                   string  `json:"reff"`
-		CoreReference          string  `json:"coreReference"`
-		SourceBranchCode       string  `json:"sourceBranchCode"`
-		DestinationBranchCode  string  `json:"destinationBranchCode"`
-		SourceProductCode      string  `json:"sourceProductCode"`
-		DestinationProductCode string  `json:"destinationProductCode"`
-		DebitCurrency          string  `json:"debitCurrency"`
-		CreditCurrency         string  `json:"creditCurrency"`
-		AvailableBalance       string  `json:"availableBalance"`
-		ArNumber               string  `json:"arNumber"`
-	}
 	TransferRequest struct {
 		ReferenceNumber string  `json:"referenceNumber"`
 		CreditAccount   string  `json:"creditAccount"`
@@ -176,18 +155,12 @@ type (
 		Amount          float64 `json:"amount"`
 		AdminFee        float64 `json:"adminFee"`
 	}
-
-	TransferResponse struct {
-		ResponseCode          string  `json:"responseCode"`
-		Description           string  `json:"description"`
-		CreditAccount         string  `json:"creditAccount"`
-		DebitAccount          string  `json:"debitAccount"`
-		ReferenceNumber       string  `json:"referenceNumber"`
-		CreditName            string  `json:"creditName"`
-		ProductCode           string  `json:"productCode"`
-		ProductName           string  `json:"productName"`
-		DestinationBranchCode string  `json:"destinationBranchCode"`
-		Amount                float64 `json:"amount"`
-		InactiveMarker        string  `json:"inactiveMarker"`
+	TransferData struct {
+		ReferenceNumber string  `json:"referenceNumber"`
+		CreditAccount   string  `json:"creditAccount"`
+		DebitAccount    string  `json:"debitAccount"`
+		Description     string  `json:"description"`
+		Amount          float64 `json:"amount"`
+		AdminFee        float64 `json:"adminFee"`
 	}
 )

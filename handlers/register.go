@@ -319,7 +319,7 @@ func SignOffReq(c *fiber.Ctx) error {
 		Type1:            "SignOffRequest",
 		Occurence1:       "[1..1]",
 	}
-	c.Response().Header.Set("Context-Type", "application/xmzl")
+	c.Response().Header.Set("Context-Type", "application/xml")
 	xmlInfo, err := xml.MarshalIndent(instap, "", " ")
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).SendString("error generating XMl responcse")
@@ -656,41 +656,105 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 }
 
 func CreditsTransfer(c *fiber.Ctx) error {
-
 	// Parse the JSON request body into a TransferRequest struct
-	var request models.TransferRequest
-	if err := c.BodyParser(&request); err != nil {
-		log.Printf("Errorrequest body: %v", err)
-		return c.JSON(fiber.Map{"error": "Invalid request format"})
+	Transaction := &models.TransferRequest{}
+	if err := c.BodyParser(&Transaction); err != nil {
+		return c.JSON(fiber.Map{
+			"Error": err.Error(),
+		})
 	}
 
-	// Validate the transfer request
-	if request.ReferenceNumber == "" {
-		return c.JSON(fiber.Map{"error": "Reference number is required"})
+	BaseURL := "http://127.0.0.1:1432/api/v1/ips/fdsap"
+
+	iGate := BaseURL
+
+	req, err := http.NewRequest(http.MethodPost, iGate, nil)
+
+	if err != nil {
+		log.Printf("Error creating request: %v", err.Error())
+		return c.JSON(fiber.Map{
+			"Error": err.Error(),
+		})
 	}
 
-	if request.CreditAccount == "" {
-		return c.JSON(fiber.Map{"error": "Credit account is required"})
+	// Set headers for the request as needed
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+	// Send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"Error": err.Error(),
+		})
+	}
+	defer resp.Body.Close()
+
+	// Check for response errors
+	if resp.StatusCode != http.StatusOK {
+		// Read the response body for a more informative error message
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.JSON(fiber.Map{
+				"Error": err.Error(),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"Message":    "Request failed with status code",
+			"StatusCode": resp.StatusCode,
+			"Error":      string(body),
+		})
 	}
 
-	if request.DebitAccount == "" {
-		return c.JSON(fiber.Map{"error": "Debit account is required"})
+	return c.JSON(fiber.Map{
+		"Message": "success",
+		"Header":  req.Header,
+		"Data":    Transaction,
+	})
+
+}
+
+func TransCredit(c *fiber.Ctx) error {
+	transaction := &models.TransferRequest{}
+
+	if err := c.BodyParser(transaction); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
-	response := models.TransferResponse{
-		ResponseCode:          "00",
-		Description:           "Fund Transfer",
-		CreditAccount:         request.CreditAccount,
-		DebitAccount:          request.DebitAccount,
-		ReferenceNumber:       request.ReferenceNumber,
-		CreditName:            "nil", // Set to nil for null values
-		ProductCode:           "nil", // Set to nil for null values
-		ProductName:           "nil", // Set to nil for null values
-		DestinationBranchCode: "PH1030001",
-		Amount:                request.Amount,
-		InactiveMarker:        "nil", // Set to nil for null values
+	iGate := "http://127.0.0.1:1432/api/v1/ips/fdsaps"
+
+	req, err := http.NewRequest(http.MethodPost, iGate, nil)
+
+	if err != nil {
+		log.Printf("Error creating request: %v", err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
-	// Respond with the transfer response
-	return c.JSON(response)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Merchant-ID", "QVBJMDAwMDU=")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "success",
+			// "Header":      req.Header,
+			"transaction": transaction,
+		})
+	}
+	return c.JSON(transaction)
 }
