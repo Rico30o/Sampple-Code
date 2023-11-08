@@ -54,5 +54,6 @@ func SetupRoutes(app *fiber.App) {
 	fdsapEndpoint.Post("/credits", handlers.CreditsTransfer)
 
 	fdsapEndpoint.Post("/transfer", handlers.TransCredit)
+	fdsapEndpoint.Put("/Inquiry", handlers.InquiryTransferCredit)
 
 }

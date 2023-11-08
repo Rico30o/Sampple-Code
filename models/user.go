@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/xml"
+	"net/http"
 	"time"
 
 	"gorm.io/gorm"
@@ -162,5 +163,93 @@ type (
 		Description     string  `json:"description"`
 		Amount          float64 `json:"amount"`
 		AdminFee        float64 `json:"adminFee"`
+	}
+	InquiryTransferCredit struct {
+		ResponseCode    string  `json:"responsecode"`
+		Description     string  `json:"description"`
+		CreditAccoun    string  `json:"creditAccount"`
+		DebitAccount    string  `json:"debitAccount"`
+		ReferenceNumber string  `json:"referenceNumber"`
+		CreditName      string  `json:"creditname"`
+		Amount          float64 `json:"amount"`
+	}
+)
+
+type (
+	TransferCredit struct {
+		ReferenceNumber  string  `json:"referenceNumber"`
+		CreditAccount    string  `json:"creditAccount"`
+		DebitAccount     string  `json:"debitAccount"`
+		TransactionFee   float32 `json:"transactionFee"`
+		SourceBranchCode string  `json:"sourceBranchCode"`
+		Amount           float32 `json:"amount"`
+		AdminFee         float32 `json:"adminFee"`
+		Description      string  `json:"description"`
+	}
+
+	TransferCreditResponse struct {
+		ResponseCode    string  `json:"responseCode"`
+		Description     string  `json:"description"`
+		CreditAccount   string  `json:"creditAccount"`
+		DebitAccount    string  `json:"debitAccount"`
+		CustomerName    string  `json:"customerName"`
+		AccountName     string  `json:"accountName"`
+		ReferenceNumber string  `json:"referenceNumber"`
+		Amount          float32 `json:"amount"`
+		AdminFee        string  `json:"adminFee"`
+		Reff            string  `json:"reff"`
+
+		// "reff": "0718101137191816OPENAPITFCR-544303",
+		// "coreReference": "FT20308RX9FV",
+		// "sourceBranchCode": "PH1030032",
+		// "destinationBranchCode": "PH1030001",
+		// "sourceProductCode": "6003",
+		// "destinationProductCode": "6007",
+		// "debitCurrency": "PHP",
+		// "creditCurrency": "PHP",
+		// "availableBalance": "7141211",
+		// "arNumber": "AR-AAA-000000000234346"
+	}
+)
+
+type (
+	Transfer_Request struct {
+		ReferenceNumber    string  `json:"referenceNumber"`
+		CreditAccount      string  `json:"creditAccount"`
+		DebitAccount       string  `json:"debitAccount"`
+		TransactionFee     float64 `json:"transactionFee"`
+		SourceBranchCode   string  `json:"sourceBranchCode"`
+		Amount             float64 `json:"amount"`
+		Description        string  `json:"description"`
+		AdminFee           float64 `json:"adminFee"`
+		Transfer_Responces Transfer_Responces
+	}
+
+	Trans_Response struct {
+		Message string      `json:"message"`
+		Header  http.Header `json:"header"`
+		Data    string      `json:"data"`
+	}
+
+	Transfer_Responces struct {
+		ResponseCode           string  `json:"responseCode"`
+		Description            string  `json:"description"`
+		CreditAccount          string  `json:"creditAccount"`
+		DebitAccount           string  `json:"debitAccount"`
+		CustomerName           string  `json:"customerName"`
+		AccountName            string  `json:"accountName"`
+		ReferenceNumber        string  `json:"referenceNumber"`
+		Amount                 float64 `json:"amount"`
+		AdminFee               string  `json:"adminFee"`
+		Reff                   string  `json:"reff"`
+		CoreReference          string  `json:"coreReference"`
+		SourceBranchCode       string  `json:"sourceBranchCode"`
+		DestinationBranchCode  string  `json:"destinationBranchCode"`
+		SourceProductCode      string  `json:"sourceProductCode"`
+		DestinationProductCode string  `json:"destinationProductCode"`
+		DebitCurrency          string  `json:"debitCurrency"`
+		CreditCurrency         string  `json:"creditCurrency"`
+		AvailableBalance       string  `json:"availableBalance"`
+		ARNumber               string  `json:"arNumber"`
 	}
 )

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -655,65 +657,106 @@ func GetOnlineRecords(c *fiber.Ctx) error {
 	})
 }
 
-func CreditsTransfer(c *fiber.Ctx) error {
-	// Parse the JSON request body into a TransferRequest struct
-	Transaction := &models.TransferRequest{}
-	if err := c.BodyParser(&Transaction); err != nil {
-		return c.JSON(fiber.Map{
-			"Error": err.Error(),
+// func CreditsTransfer(c *fiber.Ctx) error {
+// 	// Parse the JSON request body into a TransferRequest struct
+// 	Transaction := &models.TransferRequest{}
+// 	if err := c.BodyParser(&Transaction); err != nil {
+// 		return c.JSON(fiber.Map{
+// 			"Error": err.Error(),
+// 		})
+// 	}
+
+// 	BaseURL := "http://127.0.0.1:1432/api/v1/ips/fdsap"
+
+// 	iGate := BaseURL
+
+// 	req, err := http.NewRequest(http.MethodPost, iGate, nil)
+
+// 	if err != nil {
+// 		log.Printf("Error creating request: %v", err.Error())
+// 		return c.JSON(fiber.Map{
+// 			"Error": err.Error(),
+// 		})
+// 	}
+
+// 	// Set headers for the request as needed
+// 	req.Header.Add("Content-Type", "application/json")
+// 	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+// 	// Send the request
+// 	client := &http.Client{}
+// 	resp, err := client.Do(req)
+// 	if err != nil {
+// 		return c.JSON(fiber.Map{
+// 			"Error": err.Error(),
+// 		})
+// 	}
+// 	defer resp.Body.Close()
+
+// 	// Check for response errors
+// 	if resp.StatusCode != http.StatusOK {
+// 		// Read the response body for a more informative error message
+// 		body, err := io.ReadAll(resp.Body)
+// 		if err != nil {
+// 			return c.JSON(fiber.Map{
+// 				"Error": err.Error(),
+// 			})
+// 		}
+
+// 		return c.JSON(fiber.Map{
+// 			"Message":    "Request failed with status code",
+// 			"StatusCode": resp.StatusCode,
+// 			"Error":      string(body),
+// 		})
+// 	}
+
+// 	return c.JSON(fiber.Map{
+// 		"Message": "success",
+// 		"Header":  req.Header,
+// 		"Data":    Transaction,
+// 	})
+
+// }
+
+func InquiryTransferCredit(c *fiber.Ctx) error {
+	inquiry := &models.InquiryTransferCredit{}
+	if err := c.BodyParser(inquiry); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
-
-	BaseURL := "http://127.0.0.1:1432/api/v1/ips/fdsap"
-
-	iGate := BaseURL
+	iGate := "http://127.0.0.1:1432/api/v1/ips/Inquiry"
 
 	req, err := http.NewRequest(http.MethodPost, iGate, nil)
 
 	if err != nil {
 		log.Printf("Error creating request: %v", err.Error())
-		return c.JSON(fiber.Map{
-			"Error": err.Error(),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
 
-	// Set headers for the request as needed
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Merchant-ID", "4455667788")
 
-	// Send the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
+
 	if err != nil {
-		return c.JSON(fiber.Map{
-			"Error": err.Error(),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
 	defer resp.Body.Close()
 
-	// Check for response errors
 	if resp.StatusCode != http.StatusOK {
-		// Read the response body for a more informative error message
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.JSON(fiber.Map{
-				"Error": err.Error(),
-			})
-		}
-
-		return c.JSON(fiber.Map{
-			"Message":    "Request failed with status code",
-			"StatusCode": resp.StatusCode,
-			"Error":      string(body),
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "success",
+			// "Header":      req.Header,
+			"transaction": inquiry,
 		})
 	}
-
-	return c.JSON(fiber.Map{
-		"Message": "success",
-		"Header":  req.Header,
-		"Data":    Transaction,
-	})
-
+	return c.JSON(inquiry)
 }
 
 func TransCredit(c *fiber.Ctx) error {
@@ -721,7 +764,8 @@ func TransCredit(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(transaction); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
+			"error":   "JSON parsing error",
+			"details": err.Error(),
 		})
 	}
 
@@ -751,10 +795,142 @@ func TransCredit(c *fiber.Ctx) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "success",
-			// "Header":      req.Header,
-			"transaction": transaction,
+			"Header": req.Header,
+			"data":   transaction,
 		})
 	}
 	return c.JSON(transaction)
+}
+
+//-------------//
+
+// func TransferCreditProcess(c *fiber.Ctx) error {
+// 	transferCreditFields := &models.TransferCredit{}
+// 	if parsErr := c.BodyParser(transferCreditFields); parsErr != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "error parsing",
+// 			"data":    parsErr.Error(),
+// 		})
+// 	}
+
+// 	transferCreditRequirements, marshalErr := json.Marshal(transferCreditFields)
+// 	if marshalErr != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "marshal error",
+// 			"error":   marshalErr.Error(),
+// 		})
+// 	}
+
+// 	// This will get the endpoint from DB
+// 	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+// 	client := &http.Client{}
+// 	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+// 	req.Header.Add("Content-Type", "application/json")
+// 	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+// 	fmt.Println("REQUEST:", req)
+// 	if err != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "http request error",
+// 			"error":   err.Error(),
+// 		})
+// 	}
+
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "client request error",
+// 			"error":   err.Error(),
+// 		})
+// 	}
+// 	defer res.Body.Close()
+
+// 	body, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "reading body error",
+// 			"error":   err.Error(),
+// 		})
+// 	}
+
+// 	// response := &models.TransferCreditResponse{}
+// 	response := &map[string]interface{}{}
+// 	if unmarshalErr := json.Unmarshal(body, response); unmarshalErr != nil {
+// 		return c.JSON(fiber.Map{
+// 			"message": "unmarshal error",
+// 			"error":   err.Error(),
+// 		})
+// 	}
+
+//		fmt.Println("RESPONSE:", response)
+//		return c.JSON(fiber.Map{
+//			"transferCredit": string(transferCreditRequirements),
+//			"serviceEP":      ServiceEP,
+//			"response":       response,
+//		})
+//	}
+func CreditsTransfer(c *fiber.Ctx) error {
+	transferCredits := &models.TransferCredit{}
+	if parsErr := c.BodyParser(transferCredits); parsErr != nil {
+		return c.JSON(fiber.Map{
+			"message": "error parsing",
+			"data":    parsErr.Error(),
+		})
+	}
+	transferCreditRequirements, marshalErr := json.Marshal(transferCredits)
+	if marshalErr != nil {
+		return c.JSON(fiber.Map{
+			"message": "marshal error",
+			"error":   marshalErr.Error(),
+		})
+	}
+	ServiceEP := "http://127.0.0.1:1432/api/v1/ips/fdsap/credits"
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Merchant-ID", "QVBJMDAwMDU=")
+
+	fmt.Println("REQUEST:", req)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "http request error",
+			"error":   err.Error(),
+		})
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "client request error",
+			"error":   err.Error(),
+		})
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "reading body error",
+			"error":   err.Error(),
+		})
+	}
+
+	// response := &models.TransferCreditResponse{}
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return c.JSON(fiber.Map{
+			"message": "unmarshal error",
+			"error":   err.Error(),
+		})
+	}
+
+	fmt.Println("RESPONSE:", string(body))
+
+	return c.JSON(fiber.Map{
+		"transferCredit": string(transferCreditRequirements),
+		"serviceEP":      ServiceEP,
+		"response":       response,
+	})
 }
