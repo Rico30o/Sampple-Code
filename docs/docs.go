@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/13": {
+        "/SignedOn": {
             "post": {
                 "description": "Inserts user data into the trytable and provides a response message.",
                 "consumes": [

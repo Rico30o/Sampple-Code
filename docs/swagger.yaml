@@ -42,7 +42,7 @@ info:
   title: InstaPay
   version: 1.16.2
 paths:
-  /13:
+  /SignedOn:
     post:
       consumes:
       - application/json

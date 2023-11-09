@@ -3,14 +3,17 @@ package routes
 import (
 	_ "sample/docs"
 	"sample/handlers"
+	"sample/middleware"
 
-	swagger "github.com/arsmn/fiber-swagger/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
+	// Import the http-swagger package
 )
 
 func SetupRoutes(app *fiber.App) {
 	//swagger routes
-	app.Get("/InstaPay-docs*", swagger.HandlerDefault)
+	// app.Get("/InstaPay-docs*", swagger.HandlerDefault)
+	app.Get("/Sampple-code*", swagger.HandlerDefault)
 
 	apiEndpoint := app.Group("/api")
 	v1Endpoint := apiEndpoint.Group("/v1")
@@ -55,5 +58,16 @@ func SetupRoutes(app *fiber.App) {
 
 	fdsapEndpoint.Post("/transfer", handlers.TransCredit)
 	fdsapEndpoint.Put("/Inquiry", handlers.InquiryTransferCredit)
+}
+func AuthenticatedRoutes(app *fiber.App) {
+	// Apply JWTMiddleware to these routes
+	authenticated := app.Group("/authenticated", middleware.JWTMiddleware())
+	authenticated.Get("/secure-endpoint", secureEndpoint)
+}
 
+func secureEndpoint(c *fiber.Ctx) error {
+	// Handle the secure endpoint here
+	return c.JSON(fiber.Map{
+		"message": "You are authorized to access this endpoint!",
+	})
 }

@@ -885,7 +885,7 @@ func CreditsTransfer(c *fiber.Ctx) error {
 			"error":   marshalErr.Error(),
 		})
 	}
-	ServiceEP := "http://127.0.0.1:1432/api/v1/ips/fdsap/credits"
+	ServiceEP := "http://127.0.0.1:1432/api/v1/ips/fdsap"
 
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
@@ -932,5 +932,11 @@ func CreditsTransfer(c *fiber.Ctx) error {
 		"transferCredit": string(transferCreditRequirements),
 		"serviceEP":      ServiceEP,
 		"response":       response,
+	})
+}
+func secureEndpoint(c *fiber.Ctx) error {
+	// Handle the secure endpoint here
+	return c.JSON(fiber.Map{
+		"message": "You are authorized to access this endpoint!",
 	})
 }
