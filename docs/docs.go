@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/SignedOn": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Inserts user data into the trytable and provides a response message.",
                 "consumes": [
                     "application/json"
@@ -55,6 +60,11 @@ const docTemplate = `{
         },
         "/delete/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Delete a specific user in the database by their ID.",
                 "consumes": [
                     "application/json"
@@ -90,6 +100,11 @@ const docTemplate = `{
         },
         "/generate-token": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -127,6 +142,11 @@ const docTemplate = `{
         },
         "/update/{id}": {
             "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Update a specific user in the database by their ID.",
                 "consumes": [
                     "application/json"
@@ -209,9 +229,6 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "password": {
-                    "type": "string"
-                },
                 "username": {
                     "type": "string"
                 }
@@ -242,6 +259,13 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

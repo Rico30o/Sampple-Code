@@ -12,7 +12,10 @@ import (
 
 // @Title InstaPay
 // @version 1.16.2
-//@Basepath
+// @Basepath
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// .env

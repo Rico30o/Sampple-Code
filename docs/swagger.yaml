@@ -24,8 +24,6 @@ definitions:
     properties:
       id:
         type: integer
-      password:
-        type: string
       username:
         type: string
     type: object
@@ -75,6 +73,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Check if the user is online or offline based on input parameters.
   /delete/{id}:
     delete:
@@ -98,6 +98,8 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Delete a user by ID
   /generate-token:
     post:
@@ -122,6 +124,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Creating Token
   /update/{id}:
     put:
@@ -151,5 +155,12 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Update a user by ID
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

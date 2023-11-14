@@ -8,6 +8,11 @@
     "paths": {
         "/SignedOn": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Inserts user data into the trytable and provides a response message.",
                 "consumes": [
                     "application/json"
@@ -46,6 +51,11 @@
         },
         "/delete/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Delete a specific user in the database by their ID.",
                 "consumes": [
                     "application/json"
@@ -81,6 +91,11 @@
         },
         "/generate-token": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -118,6 +133,11 @@
         },
         "/update/{id}": {
             "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Update a specific user in the database by their ID.",
                 "consumes": [
                     "application/json"
@@ -200,9 +220,6 @@
                 "id": {
                     "type": "integer"
                 },
-                "password": {
-                    "type": "string"
-                },
                 "username": {
                     "type": "string"
                 }
@@ -233,6 +250,13 @@
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

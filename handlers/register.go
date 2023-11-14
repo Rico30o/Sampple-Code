@@ -39,6 +39,7 @@ func Add(c *fiber.Ctx) error {
 // @Success 200 {object} models.User
 // @Failure 400 {object} models.ErrorResponse
 // @Router /delete/{id} [delete]
+// @Security ApiKeyAuth
 func DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -69,6 +70,7 @@ func DeleteUser(c *fiber.Ctx) error {
 // @Failure 400 {object} models.ErrorResponse
 // @Router /update/{id} [put]
 // Update Users
+// @Security ApiKeyAuth
 func UpdateHandler(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var Reg models.User
@@ -511,6 +513,7 @@ func Notif_status(c *fiber.Ctx) error {
 // @Success 200 {object} models.AnotherTry
 // @Failure 400 {object} models.ErrorResponse
 // @Router /SignedOn [post]
+// @Security ApiKeyAuth
 func Pays(c *fiber.Ctx) error {
 	// Parse the JSON body from the request
 	var requestBody struct {
@@ -882,6 +885,7 @@ func secureEndpoint(c *fiber.Ctx) error {
 // @Success 200 {object} models.AnotherTrys
 // @Failure 500 {object} models.ErrorResponse
 // @Router /generate-token [post]  // Change the HTTP method to POST
+// @Security ApiKeyAuth
 func Token(c *fiber.Ctx) error {
 	var request models.AnotherTrys
 

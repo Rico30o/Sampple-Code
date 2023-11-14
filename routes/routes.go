@@ -58,7 +58,7 @@ func SetupRoutes(app *fiber.App) {
 
 	fdsapEndpoint.Post("/transfer", handlers.TransCredit)
 	fdsapEndpoint.Put("/Inquiry", handlers.InquiryTransferCredit)
-	app.Get("/generate-token", handlers.Token)
+	app.Post("/generate-token", handlers.Token)
 }
 func AuthenticatedRoutes(app *fiber.App) {
 	// Apply JWTMiddleware to these routes
