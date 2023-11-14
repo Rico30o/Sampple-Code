@@ -8,11 +8,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
-	// Import the httpSwagger package
 )
 
-//@Title InstaPay
-//@version 1.16.2
+// @Title InstaPay
+// @version 1.16.2
+//@Basepath
 
 func main() {
 	// .env
@@ -24,21 +24,18 @@ func main() {
 	// Initialize Fiber app
 	app := fiber.New()
 
-	//database connection
+	// Database connection
 	err = db.ConnectDB()
 	if err != nil {
 		log.Fatalf("Error connecting to the database %v", err)
 	}
 
 	// Auto-migrate models
-	db.DB.AutoMigrate(&models.Notifications_Data{}) // Correct the model name
-
-	// Serve Swagger documentation
-	// app.Get("/swagger/*", httpSwagger.Handler)
+	db.DB.AutoMigrate(&models.Notifications_Data{})
 
 	// Setup routes
 	routes.SetupRoutes(app)
-	routes.AuthenticatedRoutes(app) // Add authenticated routes
+	routes.AuthenticatedRoutes(app)
 
 	// Start server
 	err = app.Listen(":1432")

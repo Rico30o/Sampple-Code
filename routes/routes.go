@@ -13,7 +13,7 @@ import (
 func SetupRoutes(app *fiber.App) {
 	//swagger routes
 	// app.Get("/InstaPay-docs*", swagger.HandlerDefault)
-	app.Get("/Sampple-code*", swagger.HandlerDefault)
+	app.Get("sample-code_docs/*", swagger.HandlerDefault)
 
 	apiEndpoint := app.Group("/api")
 	v1Endpoint := apiEndpoint.Group("/v1")

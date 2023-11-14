@@ -940,3 +940,7 @@ func secureEndpoint(c *fiber.Ctx) error {
 		"message": "You are authorized to access this endpoint!",
 	})
 }
+
+func Try(c *fiber.Ctx) error {
+	return nil
+}
