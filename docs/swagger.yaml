@@ -20,6 +20,15 @@ definitions:
       signon_time:
         type: string
     type: object
+  models.AnotherTrys:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       error:
@@ -90,6 +99,30 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Delete a user by ID
+  /generate-token:
+    post:
+      consumes:
+      - application/json
+      operationId: Get-Token
+      parameters:
+      - description: JSON request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AnotherTrys'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AnotherTrys'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Creating Token
   /update/{id}:
     put:
       consumes:

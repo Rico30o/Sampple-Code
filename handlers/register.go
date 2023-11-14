@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"sample/db"
+	"sample/middleware"
 	"sample/models"
 	"strings"
 	"time"
@@ -802,74 +803,6 @@ func TransCredit(c *fiber.Ctx) error {
 	return c.JSON(transaction)
 }
 
-//-------------//
-
-// func TransferCreditProcess(c *fiber.Ctx) error {
-// 	transferCreditFields := &models.TransferCredit{}
-// 	if parsErr := c.BodyParser(transferCreditFields); parsErr != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "error parsing",
-// 			"data":    parsErr.Error(),
-// 		})
-// 	}
-
-// 	transferCreditRequirements, marshalErr := json.Marshal(transferCreditFields)
-// 	if marshalErr != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "marshal error",
-// 			"error":   marshalErr.Error(),
-// 		})
-// 	}
-
-// 	// This will get the endpoint from DB
-// 	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
-
-// 	client := &http.Client{}
-// 	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
-// 	req.Header.Add("Content-Type", "application/json")
-// 	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
-
-// 	fmt.Println("REQUEST:", req)
-// 	if err != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "http request error",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-// 	res, err := client.Do(req)
-// 	if err != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "client request error",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-// 	defer res.Body.Close()
-
-// 	body, err := ioutil.ReadAll(res.Body)
-// 	if err != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "reading body error",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-// 	// response := &models.TransferCreditResponse{}
-// 	response := &map[string]interface{}{}
-// 	if unmarshalErr := json.Unmarshal(body, response); unmarshalErr != nil {
-// 		return c.JSON(fiber.Map{
-// 			"message": "unmarshal error",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-//		fmt.Println("RESPONSE:", response)
-//		return c.JSON(fiber.Map{
-//			"transferCredit": string(transferCreditRequirements),
-//			"serviceEP":      ServiceEP,
-//			"response":       response,
-//		})
-//	}
 func CreditsTransfer(c *fiber.Ctx) error {
 	transferCredits := &models.TransferCredit{}
 	if parsErr := c.BodyParser(transferCredits); parsErr != nil {
@@ -941,6 +874,37 @@ func secureEndpoint(c *fiber.Ctx) error {
 	})
 }
 
-func Try(c *fiber.Ctx) error {
-	return nil
+// @Summary Creating Token
+// @ID Get-Token
+// @Accept json
+// @Produce json
+// @Param request body models.AnotherTrys true "JSON request body"
+// @Success 200 {object} models.AnotherTrys
+// @Failure 500 {object} models.ErrorResponse
+// @Router /generate-token [post]  // Change the HTTP method to POST
+func Token(c *fiber.Ctx) error {
+	var request models.AnotherTrys
+
+	// Parse the request body
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Now, you can use request.Name and request.ID as needed
+
+	// Ensure the ID is converted to uint before passing it to GenerateToken
+	token, err := middleware.GenerateToken(uint(request.ID))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to generate token",
+		})
+	}
+
+	// Return the generated token along with the request body
+	return c.JSON(fiber.Map{
+		"token": token,
+		"data":  request, // Include the request body in the response if needed
+	})
 }

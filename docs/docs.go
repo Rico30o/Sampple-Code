@@ -88,6 +88,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/generate-token": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Creating Token",
+                "operationId": "Get-Token",
+                "parameters": [
+                    {
+                        "description": "JSON request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AnotherTrys"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AnotherTrys"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/update/{id}": {
             "put": {
                 "description": "Update a specific user in the database by their ID.",
@@ -162,6 +199,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "signon_time": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnotherTrys": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }
