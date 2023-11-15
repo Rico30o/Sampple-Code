@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/xml"
 	"net/http"
+	"sample/bah"
 	"time"
 
 	"gorm.io/gorm"
@@ -258,5 +259,113 @@ type (
 	AnotherTrys struct {
 		ID       uint   `json:"id"`
 		Username string `json:"username"`
+	}
+	CreditTransferJSON struct {
+		TransactionType     string  `json:"transactionType"`
+		Status              string  `json:"status"`
+		ReasonCode          string  `json:"reasonCode"`
+		LocalInstrument     string  `json:"localInstrument"`
+		InstructionID       string  `json:"instructionId"`
+		TransactionID       string  `json:"transactionId"`
+		ReferenceID         string  `json:"referenceId"`
+		SenderBIC           string  `json:"senderBIC"`
+		SenderName          string  `json:"senderName"`
+		SenderAccount       string  `json:"senderAccount"`
+		AmountCurrency      string  `json:"amountCurrency"`
+		SenderAmount        float64 `json:"senderAmount"`
+		ReceivingBIC        string  `json:"receivingBIC"`
+		ReceivingName       string  `json:"receivingName"`
+		ReceivingAccount    string  `json:"receivingAccount"`
+		TransactionDateTime string  `json:"transactionDateTime"`
+		BNResponse          string  `json:"bnResponse"`
+	}
+)
+
+// SYSTEM STATUS BROADCAST MESSAGE
+type (
+	SystemNotificationISO20022 struct {
+		XMLName   xml.Name                       `xml:"Message"`
+		XMLNS     string                         `xml:"xmlns,attr"`
+		XMLNsHead string                         `xml:"head,attr"`
+		XMLNsNe   string                         `xml:"ne,attr"`
+		Header    bah.HCRequestApplicationHeader `xml:"AppHdr"`
+		Body      SystemNotificationWrapper
+	}
+
+	SystemNotificationWrapper struct {
+		XMLName xml.Name               `xml:"SystemNotificationEvent"`
+		Body    SystemNotificationBody `xml:"SysEvtNtfctn"`
+	}
+
+	SystemNotificationBody struct {
+		XMLName            xml.Name           `xml:"SysEvtNtfctn"`
+		SystemNotification SystemNotification `xml:"EvtInf"`
+	}
+	SystemNotification struct {
+		EventCode        string   `xml:"EvtCd"`
+		EventParams      []string `xml:"EvtParam"`
+		EventDescription []string `xml:"EvtDesc"`
+		EvenTime         string   `xml:"EvtTm"`
+	}
+)
+
+type (
+	TransactCredit struct {
+		ReceivingBIC     string `json:"receivingBIC"`
+		ReceivingAccount string `json:"receivingAccountNumber"`
+		ReceivingName    string `json:"receivingName"`
+		SenderName       string `json:"senderName"`
+		SenderBIC        string `json:"senderBIC"`
+		SenderAccount    string `json:"senderAccountNumber"`
+		Amount           string `json:"amount"`
+		Currency         string `json:"currency"`
+		ReferenceId      string `json:"referenceId"`
+		InstructionId    string `json:"instapayReference"`
+	}
+	//used for getting the request body
+	RequestMessageStatusReportISO20022 struct {
+		XMLName   xml.Name                       `xml:"Message"`
+		XMLNS     string                         `xml:"xmlns,attr"`
+		XMLNSHead string                         `xml:"head,attr"`
+		XMLNSPS   string                         `xml:"ps,attr"`
+		Header    bah.HCRequestApplicationHeader `xml:"AppHdr"`
+	}
+
+	RejectMessageStatusReportISO20022 struct {
+		XMLName   xml.Name              `xml:"Message"`
+		XMLNS     string                `xml:"xmlns,attr"`
+		XMLNSHead string                `xml:"xmlns:head,attr"`
+		XMLNSPs   string                `xml:"xmlns:ps,attr"`
+		Header    bah.ApplicationHeader `xml:"AppHdr"`
+	}
+	// used to get the request body
+	RequestCreditTransferISO20022 struct {
+		XMLName   xml.Name                           `xml:"Message"`
+		XMLNS     string                             `xml:"xmlns,attr"`
+		XMLNSct   string                             `xml:"ct,attr"`
+		XMLNShead string                             `xml:"head,attr"`
+		Header    bah.RequestBranchApplicationHeader `xml:"AppHdr"`
+		// Body      RequestCreditTransferWrapper       `xml:"CreditTransfer"`
+	}
+	CreditTransferSending struct {
+		ResponseCode           string  `json:"responseCode"`
+		Description            string  `json:"description"`
+		DebitAccount           string  `json:"debitAccount"`
+		CreditAccount          string  `json:"creditAccount"`
+		CustomerName           string  `json:"customerName"`
+		AccountName            string  `json:"accountName"`
+		ReferenceNumber        string  `json:"referenceNumber"`
+		Amount                 float64 `json:"amount"`
+		AdminFee               string  `json:"adminFee"`
+		Reff                   string  `json:"reff"`
+		CoreReference          string  `json:"coreReference"`
+		SourceBranchCode       string  `json:"sourceBranchCode"`
+		DestinationBranchCode  string  `json:"destinationBranchCode"`
+		SourceProductCode      string  `json:"sourceProductCode"`
+		DestinationProductCode string  `json:"destinationProductCode"`
+		DebitCurrency          string  `json:"debitCurrency"`
+		CreditCurrency         string  `json:"creditCurrency"`
+		AvalableBalance        string  `json:"availableBalance"`
+		ArNumber               string  `json:"arNumber"`
 	}
 )

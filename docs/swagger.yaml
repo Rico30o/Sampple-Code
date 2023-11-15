@@ -1,4 +1,20 @@
 definitions:
+  handlers.CTRequest:
+    properties:
+      instructionId:
+        type: string
+      receivingBIC:
+        type: string
+      senderBIC:
+        type: string
+    type: object
+  handlers.CallBack:
+    properties:
+      referenceId:
+        type: string
+      status:
+        type: string
+    type: object
   models.AnotherTry:
     properties:
       create_at:
@@ -127,6 +143,35 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Creating Token
+  /get-instructionID:
+    post:
+      description: Get an instruction by its reference ID
+      operationId: get-GetInstructionID
+      parameters:
+      - description: Reference ID
+        in: body
+        name: ReferenceId
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CallBack'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.CTRequest'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get Instruction by Reference ID
+      tags:
+      - IPS
   /update/{id}:
     put:
       consumes:

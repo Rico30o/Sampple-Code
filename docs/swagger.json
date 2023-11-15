@@ -131,6 +131,50 @@
                 }
             }
         },
+        "/get-instructionID": {
+            "post": {
+                "description": "Get an instruction by its reference ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "IPS"
+                ],
+                "summary": "Get Instruction by Reference ID",
+                "operationId": "get-GetInstructionID",
+                "parameters": [
+                    {
+                        "description": "Reference ID",
+                        "name": "ReferenceId",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CallBack"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CTRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/update/{id}": {
             "put": {
                 "security": [
@@ -182,6 +226,31 @@
         }
     },
     "definitions": {
+        "handlers.CTRequest": {
+            "type": "object",
+            "properties": {
+                "instructionId": {
+                    "type": "string"
+                },
+                "receivingBIC": {
+                    "type": "string"
+                },
+                "senderBIC": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.CallBack": {
+            "type": "object",
+            "properties": {
+                "referenceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "models.AnotherTry": {
             "type": "object",
             "properties": {

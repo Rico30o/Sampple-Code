@@ -3,6 +3,7 @@ module sample
 go 1.21.0
 
 require (
+	github.com/JohnRebellion/go-utils v0.2.2 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
@@ -40,11 +41,16 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/go-swagger/go-swagger v0.30.5 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/gofiber/fiber v1.13.3 // indirect
-	github.com/gofiber/fiber/v2 v2.50.0 // indirect
+	github.com/gofiber/fiber v1.14.6 // indirect
+	github.com/gofiber/fiber/v2 v2.51.0 // indirect
+	github.com/gofiber/jwt v0.2.0 // indirect
+	github.com/gofiber/jwt/v2 v2.2.7 // indirect
+	github.com/gofiber/jwt/v3 v3.3.10 // indirect
 	github.com/gofiber/swagger v0.1.14 // indirect
-	github.com/gofiber/utils v0.0.9 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/gofiber/utils v0.0.10 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -68,7 +74,7 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -114,7 +120,7 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.16.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

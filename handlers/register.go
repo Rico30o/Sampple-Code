@@ -11,11 +11,19 @@ import (
 	"net/http"
 	"os"
 	"sample/db"
+	igateModel "sample/igateModel"
 	"sample/middleware"
+	"sample/middleware/encryptDecrypt"
+	"sample/middleware/envRouting"
+	"sample/middleware/loggers"
 	"sample/models"
+	"sample/util"
+	webtool "sample/webTool"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/JohnRebellion/go-utils/database"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -821,7 +829,7 @@ func CreditsTransfer(c *fiber.Ctx) error {
 			"error":   marshalErr.Error(),
 		})
 	}
-	ServiceEP := "http://127.0.0.1:1432/api/v1/ips/fdsap"
+	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
 
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
@@ -910,5 +918,503 @@ func Token(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"token": token,
 		"data":  request, // Include the request body in the response if needed
+	})
+}
+
+type (
+	CallBack struct {
+		ReferenceId string `json:"referenceId"`
+		Status      string `json:"status"`
+	}
+
+	CTRequest struct {
+		SenderBIC     string `json:"senderBIC"`
+		ReceivingBIC  string `json:"receivingBIC"`
+		InstructionId string `json:"instructionId"`
+	}
+)
+
+func GetCreditTransferTransaction(c *fiber.Ctx) error {
+	m := []models.CreditTransferJSON{}
+	database.DBConn.Raw("SELECT * FROM rbi_instapay.ct_transaction").Find(&m)
+	return c.Status(200).JSON(&fiber.Map{
+		"message": "data successfully fetch",
+		"data":    m,
+	})
+}
+
+func CallbackFunction(c *fiber.Ctx, status, instructionId, process string) string {
+	log.Println("Start Callback Function")
+	var reference CallBack
+
+	database.DBConn.Raw("select reference_id from rbi_instapay.ct_transaction where instruction_id=? ", instructionId).Scan(&reference.ReferenceId)
+
+	if status == "RJCT" {
+		reference.Status = "FAILED"
+	} else {
+		reference.Status = "SUCCESS"
+	}
+
+	jsonData, err := json.Marshal(reference)
+	if err != nil {
+		fmt.Println("Error encoding JSON:", err)
+		return err.Error()
+	}
+
+	fmt.Println("Credit Callback:\n", string(jsonData))
+	// Create the request
+
+	// url := "https://dev-api-janus.fortress-asya.com:8114/creditCallback"
+	ServiceEP := util.GetServiceEP("CreditCallback", strings.ToLower(envRouting.Environment))
+	req, err := http.NewRequest(http.MethodPut, ServiceEP, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return err.Error()
+	}
+
+	// Set the content type header
+	req.Header.Set("Content-Type", "application/json")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error making request:", err)
+		return err.Error()
+	}
+	defer resp.Body.Close()
+
+	loggers.CallbackLogs(c.Path(), reference.ReferenceId, instructionId, jsonData, resp.Body)
+	log.Println("End Callback Function")
+	return reference.ReferenceId
+}
+
+// For Credit Transfer as Receiver
+func CompleteRequestTransaction(c *fiber.Ctx, instructionID string) (bool, error) {
+	fmt.Println("Start Transfer Credit")
+	log.Println("Start Transfer Credit")
+	transactCredit := &models.TransactCredit{}
+	database.DBConn.Raw("SELECT * FROM rbi_instapay.ct_transaction WHERE instruction_id = ?", instructionID).Scan(transactCredit)
+
+	// Fetch settlement account and decrypt the data
+	settlementAccount := &webtool.SettlementAccount{}
+	database.DBConn.Debug().Raw("SELECT account_number FROM rbi_instapay.settlement WHERE event = 'receiving'").Scan(settlementAccount)
+	decryptedAccountNumber, _ := encryptDecrypt.Decrypt(settlementAccount.AccountNumber, envRouting.SecretKey)
+	amount, _ := strconv.ParseFloat(transactCredit.Amount, 64)
+
+	transferCredit := &igateModel.TransferCredit{
+		ReferenceNumber: transactCredit.ReferenceId,
+		CreditAccount:   transactCredit.ReceivingAccount,
+		DebitAccount:    decryptedAccountNumber,
+		Amount:          amount,
+		Description:     fmt.Sprintf("%v %v", transactCredit.ReferenceId, "Instapay Receiving Fund Transfer"),
+	}
+
+	transferCreditRequirements, err := json.Marshal(transferCredit)
+	if err != nil {
+		fmt.Println("Error in JSON marshal:", err)
+		return false, err
+	}
+
+	fmt.Println("Transfer Credit:", transferCredit)
+	// This will get the endpoint from DB
+	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+	client := &http.Client{}
+	req, reqErr := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+	if reqErr != nil {
+		fmt.Println("Error requesting:", err)
+		return false, reqErr
+	}
+
+	// Set the content type header
+	req.Header.Set("Content-Type", "application/json")
+
+	// Make the request
+	resp, respErr := client.Do(req)
+	if respErr != nil {
+		fmt.Println("Getting error request:", err)
+		return false, respErr
+	}
+
+	resultTransactCredit := &igateModel.TransferCreditResponse{}
+	decodErr := json.NewDecoder(resp.Body).Decode(resultTransactCredit)
+	if decodErr != nil {
+		return false, decodErr
+	}
+
+	defer resp.Body.Close()
+
+	fmt.Println("---------------------------------------")
+	fmt.Println("SERVICE EP:", ServiceEP)
+	fmt.Println("TRANSFER CREDIT:", transferCredit)
+	fmt.Println("CORE REFERENCE ID:", resultTransactCredit.CoreReference)
+	fmt.Println("RECEIVING BIC:", transactCredit.ReceivingBIC)
+	fmt.Println("RECEIVING NAME:", transactCredit.ReceivingName)
+	fmt.Println("RECEIVING ACCOUNT:", transactCredit.ReceivingAccount)
+	fmt.Println("SENDER BIC:", transactCredit.SenderBIC)
+	fmt.Println("SENDER NAME:", transactCredit.SenderName)
+	fmt.Println("SENDER ACCOUNT:", transactCredit.SenderAccount)
+	fmt.Println("AMOUNT:", transactCredit.Amount)
+	fmt.Println("AVAILABLE BALANCE:", resultTransactCredit.AvalableBalance)
+	fmt.Println("INSTRUCTION ID:", transactCredit.InstructionId)
+	fmt.Println("REFERENCE ID:", resultTransactCredit.ReferenceNumber)
+	fmt.Println("RESPONSE:", resp.Body)
+	fmt.Println("---------------------------------------")
+
+	loggers.TransactCredit(c.Path(), "igate", "Transfer_Credit_Receiving", ServiceEP, instructionID, transactCredit.ReferenceId, resultTransactCredit.CoreReference, transferCreditRequirements, resultTransactCredit)
+	log.Println("End Transfer Credit")
+	fmt.Println("End Transfer Credit")
+	return true, nil
+}
+
+//	@Tags			IPS
+//
+// GetInstructionID godoc
+//
+//	@Summary		Get Instruction by Reference ID
+//	@Description	Get an instruction by its reference ID
+//	@ID				get-GetInstructionID
+//	@Produce		json
+//	@Param			ReferenceId	body		CallBack	true	"Reference ID"
+//	@Success		200			{object}	CTRequest
+//	@Failure		400			{string}	string	"Bad Request"
+//	@Failure		500			{string}	string	"Internal Server Error"
+//	@Router			/get-instructionID [post]
+func GetInstructionID(c *fiber.Ctx) error {
+	request := &CallBack{}
+	if parsErr := c.BodyParser(request); parsErr != nil {
+		return c.SendString(parsErr.Error())
+	}
+
+	instructionID := &CTRequest{}
+	if dbErr := database.DBConn.Debug().Raw("select * from rbi_instapay.ct_transaction where reference_id=? ", request.ReferenceId).Scan(instructionID).Error; dbErr != nil {
+		return c.SendString(dbErr.Error())
+	}
+	return c.JSON(fiber.Map{
+		"data": instructionID,
+	})
+
+}
+func TestTransactCredit(c *fiber.Ctx) error {
+	requestIID := &CTRequest{}
+	c.BodyParser(requestIID)
+
+	transactCredit := &models.TransactCredit{}
+	database.DBConn.Debug().Raw("SELECT * FROM rbi_instapay.ct_receiver WHERE instruction_id = ?", requestIID.InstructionId).Scan(transactCredit)
+	return c.JSON(transactCredit)
+}
+
+// func CreditTransferSending(c *fiber.Ctx, igateModel.RequestTransferCredit) string {
+// 	transactCredit := &models.TransactCredit{}
+// 	database.DBConn.Raw("SELECT * FROM rbi_instapay.ct_transaction WHERE instruction_id = ?", transferCreditFields.InstructionID).Scan(transactCredit)
+
+// 	settlementAccount := &webtool.SettlementAccount{}
+// 	database.DBConn.Debug().Raw("SELECT account_number FROM rbi_instapay.settlement WHERE event = 'receiving'").Scan(settlementAccount)
+// 	decryptedAccountNumber, _ := encryptDecrypt.Decrypt(settlementAccount.AccountNumber, envRouting.SecretKey)
+
+// 	transferCredit := &igateModel.TransferCredit{
+// 		ReferenceNumber: transactCredit.ReferenceId,
+// 		CreditAccount:   transferCreditFields.CreditAccount,
+// 		DebitAccount:    decryptedAccountNumber,
+// 		Amount:          transferCreditFields.Amount,
+// 		Description:     transferCreditFields.Description,
+// 	}
+
+// 	transferCreditRequirements, marshalErr := json.Marshal(transferCredit)
+// 	if marshalErr != nil {
+// 		return &fiber.Map{
+// 			"message": "marshal error",
+// 			"error":   marshalErr.Error(),
+// 		}, marshalErr
+// 	}
+
+// 	// This will get the endpoint from DB
+// 	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+// 	client := &http.Client{}
+// 	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+// 	req.Header.Add("Content-Type", "application/json")
+// 	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+// 	fmt.Println("REQUEST:", req)
+// 	if err != nil {
+// 		return &fiber.Map{
+// 			"message": "http request error",
+// 			"error":   err.Error(),
+// 		}, err
+// 	}
+
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return &fiber.Map{
+// 			"message": "client request error",
+// 			"error":   err.Error(),
+// 		}, err
+// 	}
+// 	defer res.Body.Close()
+
+// 	body, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		return &fiber.Map{
+// 			"message": "reading body error",
+// 			"error":   err.Error(),
+// 		}, err
+// 	}
+
+// 	response := &igateModel.TransferCreditResponse{}
+// 	if unmarshalErr := json.Unmarshal(body, response); unmarshalErr != nil {
+// 		return &fiber.Map{
+// 			"message": "unmarshal error",
+// 			"error":   err.Error(),
+// 		}, unmarshalErr
+// 	}
+
+// 	fmt.Println("RESPONSE:", response)
+// 	return &fiber.Map{
+// 		"serviceEP": ServiceEP,
+// 		"response":  response,
+// 	}, nil
+// }
+
+func CreditTransferSending(c *fiber.Ctx) error {
+	transferCreditFields := new(igateModel.RequestTransferCredit)
+
+	if err := c.BodyParser(transferCreditFields); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing request body",
+			"error":   err.Error(),
+		})
+	}
+
+	transactCredit := &models.TransactCredit{}
+	// database.DBConn.Raw("SELECT * FROM rbi_instapay.ct_transaction WHERE instruction_id = ?", transferCreditFields.InstructionID).Scan(transactCredit)
+
+	settlementAccount := &webtool.SettlementAccount{}
+	// database.DBConn.Debug().Raw("SELECT account_number FROM rbi_instapay.settlement WHERE event = 'receiving'").Scan(settlementAccount)
+	decryptedAccountNumber, _ := encryptDecrypt.Decrypt(settlementAccount.AccountNumber, envRouting.SecretKey)
+
+	transferCredit := &igateModel.TransferCredit{
+		ReferenceNumber: transactCredit.ReferenceId,
+		CreditAccount:   transferCreditFields.CreditAccount,
+		DebitAccount:    decryptedAccountNumber,
+		Amount:          transferCreditFields.Amount,
+		Description:     transferCreditFields.Description,
+	}
+
+	transferCreditRequirements, marshalErr := json.Marshal(transferCredit)
+	if marshalErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "marshal error",
+			"error":   marshalErr.Error(),
+		})
+	}
+
+	// This will get the endpoint from DB
+	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "http request error",
+			"error":   err.Error(),
+		})
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "client request error",
+			"error":   err.Error(),
+		})
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "reading body error",
+			"error":   err.Error(),
+		})
+	}
+
+	response := &igateModel.TransferCreditResponse{}
+	if unmarshalErr := json.Unmarshal(body, response); unmarshalErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "unmarshal error",
+			"error":   unmarshalErr.Error(),
+		})
+	}
+
+	fmt.Println("RESPONSE:", response)
+	return c.JSON(fiber.Map{
+		"serviceEP": ServiceEP,
+		"response":  response,
+	})
+}
+func Transfer(c *fiber.Ctx) error {
+	transField := &igateModel.RequestTransferCredit{}
+
+	if err := c.BodyParser(transField); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing request body",
+			"error":   err.Error(),
+		})
+	}
+
+	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+	transactCredit := &models.TransactCredit{}
+	settlementAccount := &webtool.SettlementAccount{}
+	decryptedAccountNumber, _ := encryptDecrypt.Decrypt(settlementAccount.AccountNumber, envRouting.SecretKey)
+
+	transferCredit := &igateModel.TransferCredit{
+		ReferenceNumber: transactCredit.ReferenceId,
+		CreditAccount:   transField.CreditAccount,
+		DebitAccount:    decryptedAccountNumber,
+		Amount:          transField.Amount,
+		Description:     transField.Description,
+	}
+
+	// Marshal the transferCredit data
+	transferCreditRequirements, marshalErr := json.Marshal(transferCredit)
+	if marshalErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "marshal error",
+			"error":   marshalErr.Error(),
+		})
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "http request error",
+			"error":   err.Error(),
+		})
+	}
+
+	// Perform the HTTP request
+	res, reqErr := client.Do(req)
+	if reqErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "client request error",
+			"error":   reqErr.Error(),
+		})
+	}
+	defer res.Body.Close()
+
+	// Read the response body
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": readErr.Error(),
+		})
+	}
+
+	// Unmarshal the response data into the TransferCredits struct
+	var responseData igateModel.TransferCredits
+	if unmarshalErr := json.Unmarshal(body, &responseData); unmarshalErr != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": unmarshalErr.Error(),
+		})
+	}
+
+	// Create the response struct
+	response := struct {
+		Message string                     `json:"message"`
+		Header  http.Header                `json:"header"`
+		Data    igateModel.TransferCredits `json:"data"`
+	}{
+		Message: "success",
+		Header:  res.Header,
+		Data:    responseData,
+	}
+
+	return c.JSON(response)
+}
+
+func TransferCreditProcess(c *fiber.Ctx) error {
+	transferCreditFields := &igateModel.RequestTransferCredit{}
+	if parsErr := c.BodyParser(transferCreditFields); parsErr != nil {
+		return c.JSON(fiber.Map{
+			"message": "error parsing",
+			"data":    parsErr.Error(),
+		})
+	}
+
+	transactCredit := &models.TransactCredit{}
+	database.DBConn.Raw("SELECT * FROM rbi_instapay.ct_transaction WHERE instruction_id = ?", transferCreditFields.InstructionID).Scan(transactCredit)
+
+	settlementAccount := &webtool.SettlementAccount{}
+	database.DBConn.Debug().Raw("SELECT account_number FROM rbi_instapay.settlement WHERE event = 'receiving'").Scan(settlementAccount)
+	decryptedAccountNumber, _ := encryptDecrypt.Decrypt(settlementAccount.AccountNumber, envRouting.SecretKey)
+
+	transferCredit := &igateModel.TransferCredit{
+		ReferenceNumber: transactCredit.ReferenceId,
+		CreditAccount:   transferCreditFields.CreditAccount,
+		DebitAccount:    decryptedAccountNumber,
+		Amount:          transferCreditFields.Amount,
+		Description:     transferCreditFields.Description,
+	}
+
+	transferCreditRequirements, marshalErr := json.Marshal(transferCredit)
+	if marshalErr != nil {
+		return c.JSON(fiber.Map{
+			"message": "marshal error",
+			"error":   marshalErr.Error(),
+		})
+	}
+
+	// This will get the endpoint from DB
+	ServiceEP := util.GetServiceEP("CreditTransfer_igate", strings.ToLower(envRouting.Environment))
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, ServiceEP, bytes.NewBuffer(transferCreditRequirements))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Merchant-ID", "QVBJMDAwMDU=")
+
+	fmt.Println("REQUEST:", req)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "http request error",
+			"error":   err.Error(),
+		})
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "client request error",
+			"error":   err.Error(),
+		})
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"message": "reading body error",
+			"error":   err.Error(),
+		})
+	}
+
+	// response := &igateModel.TransferCreditResponse{}
+	// response := &igateModel.TransferCreditResponse{}
+	response := &models.CreditTransferSending{}
+	if unmarshalErr := json.Unmarshal(body, response); unmarshalErr != nil {
+		return c.JSON(fiber.Map{
+			"message": "unmarshal error",
+			"error":   unmarshalErr.Error(),
+		})
+	}
+
+	fmt.Println("RESPONSE:", response)
+	return c.JSON(fiber.Map{
+		"serviceEP": ServiceEP,
+		"response":  response,
 	})
 }
