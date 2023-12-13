@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 	"sample/db"
 	igateModel "sample/igateModel"
@@ -17,6 +18,7 @@ import (
 	"sample/middleware/envRouting"
 	"sample/middleware/loggers"
 	"sample/models"
+	"sample/payload"
 	"sample/util"
 	webtool "sample/webTool"
 	"strconv"
@@ -25,6 +27,7 @@ import (
 
 	"github.com/JohnRebellion/go-utils/database"
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/time/rate"
 )
 
 func Add(c *fiber.Ctx) error {
@@ -36,13 +39,14 @@ func Add(c *fiber.Ctx) error {
 	}
 
 	db.DB.Create(&user)
-	return c.XML(user)
+	return c.JSON(user)
 }
 
 // @Summary Delete a user by ID
 // @Description Delete a specific user in the database by their ID.
 // @Accept json
 // @Produce json
+// Tags Delete
 // @Param id path int true "User ID to delete"
 // @Success 200 {object} models.User
 // @Failure 400 {object} models.ErrorResponse
@@ -71,6 +75,7 @@ func DeleteUser(c *fiber.Ctx) error {
 // @Summary Update a user by ID
 // @Description Update a specific user in the database by their ID.
 // @Accept json
+// Tags Update
 // @Produce json
 // @Param id path int true "User ID to update"
 // @Param user body models.User true "User object to update"
@@ -517,9 +522,10 @@ func Notif_status(c *fiber.Ctx) error {
 // @ID Post-Pays
 // @Accept json
 // @Produce json
+// Tags Check Online
 // @Param request body models.AnotherTry true "JSON request body"
-// @Success 200 {object} models.AnotherTry
-// @Failure 400 {object} models.ErrorResponse
+// @Success 200 {object} models.AnotherTry "Success"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Router /SignedOn [post]
 // @Security ApiKeyAuth
 func Pays(c *fiber.Ctx) error {
@@ -889,11 +895,11 @@ func secureEndpoint(c *fiber.Ctx) error {
 // @ID Get-Token
 // @Accept json
 // @Produce json
+// @Tags Generate TOKEN
 // @Param request body models.AnotherTrys true "JSON request body"
 // @Success 200 {object} models.AnotherTrys
 // @Failure 500 {object} models.ErrorResponse
 // @Router /generate-token [post]  // Change the HTTP method to POST
-// @Security ApiKeyAuth
 func Token(c *fiber.Ctx) error {
 	var request models.AnotherTrys
 
@@ -907,18 +913,29 @@ func Token(c *fiber.Ctx) error {
 	// Now, you can use request.Name and request.ID as needed
 
 	// Ensure the ID is converted to uint before passing it to GenerateToken
-	token, err := middleware.GenerateToken(uint(request.ID))
+	token, err := middleware.GenerateToken(uint(request.ID), "user") // Provide the role, e.g., "user"
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to generate token",
 		})
 	}
 
-	// Return the generated token along with the request body
-	return c.JSON(fiber.Map{
+	// Include the generated token in the response
+	response := fiber.Map{
 		"token": token,
 		"data":  request, // Include the request body in the response if needed
-	})
+	}
+
+	// You can now pass the generated token to your Authorization middleware
+	if err := middleware.Authorization(c); err != nil {
+		// Handle authorization error
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	// Return the response
+	return c.JSON(response)
 }
 
 type (
@@ -1071,7 +1088,7 @@ func CompleteRequestTransaction(c *fiber.Ctx, instructionID string) (bool, error
 	return true, nil
 }
 
-//	@Tags			IPS
+//	@Tags GetInstructionID
 //
 // GetInstructionID godoc
 //
@@ -1417,4 +1434,723 @@ func TransferCreditProcess(c *fiber.Ctx) error {
 		"serviceEP": ServiceEP,
 		"response":  response,
 	})
+}
+
+// func DeductBalance(c *fiber.Ctx) error {
+// 	// Parse the response body into a struct for balance
+// 	balance := &igateModel.AccountValidationResponse{}
+// 	if parsErr := c.BodyParser(balance); parsErr != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "error parsing balance",
+// 			"data":    parsErr.Error(),
+// 		})
+// 	}
+
+// 	// Parse the response body into a struct for fee details
+// 	fee := &igateModel.ResponseFeeDetails{}
+// 	if err := c.BodyParser(fee); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "error parsing fee",
+// 			"data":    err.Error(),
+// 		})
+// 	}
+
+// 	// Compute the total charge
+// 	fee.TotalCharge = fee.BankIncome - fee.AgentIncome
+
+// 	// Deduct the fee from the balance, check for potential underflow
+// 	if balance.Amount < fee.TotalCharge {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "insufficient balance",
+// 		})
+// 	}
+// 	balance.Amount -= fee.TotalCharge
+
+// 	// Print specific fields to understand the flow
+// 	fmt.Printf("Deducted Fee: %v, Remaining Balance: %v\n", fee.TotalCharge, balance.Amount)
+
+// 	// Transfer the credit based on the updated balance
+// 	creditTransfer := &igateModel.AccountValidationResponse{
+// 		Amount: balance.Amount, // Set the amount to the updated balance
+// 		// Add other fields as needed based on your JSONRequestCreditTransfer structure
+// 	}
+
+// 	// Optionally, you may want to update the balance again after the credit transfer
+// 	// balance.CurrentMoney -= CreditTransfer.Amount
+
+//		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+//			"Data":        creditTransfer,
+//			"description": "success",
+//			// "referenceId":  ,
+//			// "responseCode":
+//			// "retCode":      ,
+//		})
+//	}
+func DeductBalance(c *fiber.Ctx) error {
+	// Parse the request body into a struct for balance
+	balance := &igateModel.RequestTransferCredit{}
+	if parsErr := c.BodyParser(balance); parsErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing balance",
+			"data":    parsErr.Error(),
+		})
+	}
+
+	// Assuming your deduction amount is fixed or calculated based on some logic
+	deductionAmount := 12 // Modify this according to your needs
+
+	// Parse the account validation response
+	accountValidationResponse := &igateModel.AccountValidationResponse{}
+	if parseErr := c.BodyParser(accountValidationResponse); parseErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing account validation response",
+			"data":    parseErr.Error(),
+		})
+	}
+
+	// Assuming there's a field named 'AvailableBalance' in AccountValidationResponse
+	if accountValidationResponse.AvailableBalance < 100 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "insufficient minimum balance",
+		})
+	}
+
+	// Ensure that the available balance is sufficient for the deduction
+	if accountValidationResponse.AvailableBalance < float64(deductionAmount)+100 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "insufficient balance for transfer",
+		})
+	}
+
+	// Perform the deduction
+	updatedBalance := accountValidationResponse.AvailableBalance - float64(deductionAmount)
+
+	total := updatedBalance - 100
+
+	// You may want to update the balance in the response or perform other actions here
+
+	// Return the updated balance in the response
+	return c.JSON(fiber.Map{
+		"response":         balance,
+		"deduction":        deductionAmount,
+		"message":          "deduction successful",
+		"updatedBalance":   total,
+		"availableBalance": accountValidationResponse.AvailableBalance, // Include the AvailableBalance in the response
+	})
+}
+
+// @Summary send email
+// @ID Post-send-email
+// @Accept json
+// @Produce json
+// @Tags Send Email
+// @Param request body models.EmailRequest true "JSON request body"
+// @Success 200 {object} models.EmailRequest
+// @Failure 500 {object} models.ErrorResponse
+// @Router /send-email [post]
+func Email(c *fiber.Ctx) error {
+	// Parse JSON request body
+	request := &models.EmailRequest{}
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid JSON format",
+			"error":   err.Error(),
+		})
+	}
+	// Extract data from the request structure
+	to := request.EmailRequest
+	body := request.Message
+
+	pass := "daqc uzdj wiju grag"
+	from := "ricov0304@gmail.com"
+	smtpHost := "smtp.gmail.com"
+	smtpPort := "587"
+	auth := smtp.PlainAuth("", from, pass, smtpHost)
+
+	msg := "From: " + from + "\r\n" +
+		"To: " + to + "\r\n" +
+		"Subject:  A Special Message Just for You\r\n\r\n" +
+		body
+
+		// 		// Insert data into the database
+		// 	result := db.DB.Debug().Exec(`
+		// INSERT INTO Email ("emailRequest", "message")
+		// VALUES (?, ?)`,
+		// 		request.EmailRequest,
+		// 		request.Message,
+		// 	)
+
+	// if result.Error != nil {
+	// 	// Handle the error if the database query fails
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error": result.Error.Error(),
+	// 	})
+	// }
+
+	// Send email
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{to}, []byte(msg))
+	if err != nil {
+		fmt.Println("Email sending failed:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Email sending failed",
+			"error":   err.Error(),
+		})
+	}
+
+	fmt.Println("Email sent successfully")
+	return c.JSON(fiber.Map{
+		"message": "Email sent successfully",
+	})
+
+}
+
+// // @Summary Get data
+// // @Description Get some data
+// // @Tags data
+// // @Accept json
+// // @Produce json
+// // @Router /data [get]
+// // @Security ApiKeyAuth
+// func GetData(c *fiber.Ctx) error {
+// 	return c.SendString("Data retrieved successfully!")
+// }
+
+// func Manage(c *fiber.Ctx) error {
+// 	// Parse the request body into a models.Login struct
+// 	user := &models.Login{}
+// 	if err := c.BodyParser(user); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"error": "Invalid request format",
+// 		})
+// 	}
+
+// 	// Check if the username and password are valid (you may want to query a database here)
+// 	if isValid := isValidLogin(user.Username, user.Password); !isValid {
+// 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+// 			"error": "Invalid username or password",
+// 		})
+// 	}
+
+// 	// At this point, the username and password are valid
+// 	// You can proceed with further actions like storing in the database
+
+// 	// Return a JSON response with the created user data
+// 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+// 		"message": "User created successfully",
+// 		"user":    user,
+// 	})
+// }
+
+// // Function to check if the login is valid (replace with your actual authentication logic)
+// func isValidLogin(username, password string) bool {
+// 	// Add your authentication logic here (e.g., query the database)
+// 	// For simplicity, a basic example is provided below. Replace it with your actual logic.
+
+// 	// For demonstration purposes, consider a hardcoded username and password
+// 	validUsername := "exampleuser"
+// 	validPassword := "examplepassword"
+
+// 	return username == validUsername && password == validPassword
+// }
+
+// func FeedbackId(c *fiber.Ctx) error {
+// 	// Parse the request body for feedback
+// 	feedback := &igateModel.FeedbackRequest{}
+// 	if parsErr := c.BodyParser(feedback); parsErr != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "error parsing feedback",
+// 			"data":    parsErr.Error(),
+// 		})
+// 	}
+
+// 	// Display a warning message
+// 	warningMessage := "Warning: There was an issue parsing the request body."
+
+// 	// Parse the response body for feedback validation
+// 	feedbackResponse := &igateModel.FeedbackResponse{} // Assuming "igateModel" is the correct package or type
+// 	if parseErr := c.BodyParser(feedbackResponse); parseErr != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message":  "error parsing feedback validation response",
+// 			"data":     parseErr.Error(),
+// 			"Feedback": feedback,
+// 			"warning":  warningMessage, // Include the warning message in case of parsing error
+// 		})
+// 	}
+
+// 	// Return the feedback, response, and warning for account ID
+// 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+// 		"warning": warningMessage,
+// 	})
+
+// }
+
+// Define a list of malicious account IDs
+
+var maliciousAccounts = map[string]bool{
+	"malicious123": true,
+	"evilUser":     true,
+	// Add more malicious account IDs as needed
+}
+
+// Function to check if an account is malicious
+func IsAccountMalicious(accountID string) bool {
+	// Check if the account ID is in the malicious accounts list
+	_, exists := maliciousAccounts[accountID]
+	return exists
+}
+
+func FeedbackId(c *fiber.Ctx) error {
+	// Parse the request body for feedback
+	feedback := &igateModel.FeedbackRequest{}
+	if parsErr := c.BodyParser(feedback); parsErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "error parsing feedback",
+			"data":    parsErr.Error(),
+		})
+	}
+
+	// Check if the account is malicious
+	isMalicious := IsAccountMalicious(feedback.AccountNumber)
+
+	// Display a warning message
+	warningMessage := ""
+	if isMalicious {
+		warningMessage = "Warning: This account is flagged as malicious."
+	}
+
+	// Parse the response body for feedback validation
+	feedbackResponse := &igateModel.FeedbackResponse{} // Assuming "igateModel" is the correct package or type
+	if parseErr := c.BodyParser(feedbackResponse); parseErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message":  "error parsing feedback validation response",
+			"data":     parseErr.Error(),
+			"Feedback": feedback,
+			"warning":  warningMessage, // Include the warning message in case of parsing error
+		})
+	}
+
+	// Return the feedback, response, and warning for account ID
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"warning": warningMessage,
+	})
+
+}
+
+////// Sample warning feed back for Account if malicous/////
+
+// func Feedback(c *fiber.Ctx) error {
+// 	Account := &igateModel.RequestAccountNumber{}
+
+// 	// Parse the request body
+// 	if parsErr := c.BodyParser(Account); parsErr != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "error parsing feedback",
+// 			"data":    parsErr.Error(),
+// 		})
+// 	}
+
+// 	// Check if the account is valid (replace this condition with your actual validation logic)
+// 	if !isValidAccount(Account) {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"message": "Invalid account number",
+// 			"data":    "Please provide a valid account number",
+// 		})
+// 	}
+
+// 	// If the account is valid, proceed with the feedback handling
+// 	return c.JSON(fiber.Map{
+// 		"message": "Feedback received successfully",
+// 	})
+// }
+
+// // Replace this function with your actual account validation logic
+// func isValidAccount(account *igateModel.RequestAccountNumber) bool {
+// 	// Check if the account number is not empty
+// 	if account.AccountNumber == "" {
+// 		return false
+// 	}
+
+// 	// Add additional checks for the account format as needed
+
+// 	// Sample format check: Account number should be 10 digits
+// 	if len(account.AccountNumber) != 16 {
+// 		return false
+// 	}
+
+// 	// Sample format check: Account number should consist only of numeric characters
+// 	for _, char := range account.AccountNumber {
+// 		if !unicode.IsDigit(char) {
+// 			return false
+// 		}
+// 	}
+
+// 	// Add more format checks as needed
+
+// 	return true
+// }
+
+// func Feedback(c *fiber.Ctx) error {
+// 	switch c.Method() {
+// 	case fiber.MethodPost:
+// 		// Handle POST method
+// 		Account := &payload.RequestBody{}
+
+// 		// if parsErr := c.BodyParser(Account); parsErr != nil {
+// 		// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 		// 		"message": "error parsing feedback",
+// 		// 		"data":    parsErr.Error(),
+// 		// 	})
+// 		// }
+// 		// Parse the request body
+// 		if parsErr := c.BodyParser(Account); parsErr != nil {
+// 			// Handle other parsing errors
+// 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 				"Errors": fiber.Map{
+// 					"Error": []fiber.Map{
+// 						{
+// 							"Source":      "FEEDBACK_FINANCIAL_CRIME",
+// 							"ReasonCode":  "UNSUPPORTED_MEDIA_TYPE",
+// 							"Description": "Unsupported media type",
+// 							"Recoverable": false,
+// 							"Details":     "The request media type 'application/x-www-form-urlencoded' is not supported by this resource",
+// 						},
+// 					},
+// 				},
+// 			})
+// 		}
+
+// 		// Assuming AlertID is a string
+// 		expectedAlertID := "2b588f38d1bc40bf85fc91397bc98465"
+
+// 		// Check if the Alert ID matches the specified entity
+// 		if Account.AlertID != expectedAlertID {
+// 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+// 				"Errors": fiber.Map{
+// 					"Error": []fiber.Map{
+// 						{
+// 							"Source":      "FEEDBACK_FINANCIAL_CRIME",
+// 							"ReasonCode":  "CONFLICT",
+// 							"Description": "Alert ID does not match the specified entity",
+// 							"Recoverable": false,
+// 							"Details":     nil,
+// 						},
+// 					},
+// 				},
+// 			})
+// 		}
+
+// 		// Return success response with feedbackID
+// 		response := fiber.Map{
+// 			"message":    "Feedback has been processed",
+// 			"feedbackID": expectedAlertID,
+// 		}
+
+// 		return c.Status(fiber.StatusOK).JSON(response)
+// 	}
+
+// 	// Return method not allowed response
+// 	return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
+// 		"Errors": fiber.Map{
+// 			"Error": []fiber.Map{
+// 				{
+// 					"Source":      "FEEDBACK_FINANCIAL_CRIME",
+// 					"ReasonCode":  "METHOD_NOT_ALLOWED",
+// 					"Description": "Only POST method allowed",
+// 					"Recoverable": false,
+// 					"Details":     nil,
+// 				},
+// 			},
+// 		},
+// 	})
+// }
+
+var limiter = rate.NewLimiter(rate.Limit(1), 10) // Allow 10 requests per second
+
+func Trace(c *fiber.Ctx) error {
+	// Check rate limit
+	if limiter.Allow() == false {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"Errors": fiber.Map{
+				"Error": []fiber.Map{
+					{
+						"Source":      "Gateway",
+						"ReasonCode":  "RATE_LIMIT_EXCEEDED",
+						"Description": "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
+						"Recoverable": true,
+						"Details":     nil,
+					},
+				},
+			},
+		})
+	}
+	// Check if the request method is not POST
+	if c.Method() != fiber.MethodPost {
+		return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
+			"Errors": fiber.Map{
+				"Error": []fiber.Map{
+					{
+						"Source":      "TRACE_FINANCIAL_CRIME",
+						"ReasonCode":  "METHOD_NOT_ALLOWED",
+						"Description": "Only POST method allowed",
+						"Recoverable": false,
+						"Details":     nil,
+					},
+				},
+			},
+		})
+	}
+
+	// Assuming you have a valid payload.Transaction struct
+	Trace := &payload.Transaction{}
+
+	// Parse the request body
+	if parsErr := c.BodyParser(Trace); parsErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"Errors": fiber.Map{
+				"Error": []fiber.Map{
+					{
+						"Source":      "TRACE_FINANCIAL_CRIME",
+						"ReasonCode":  "BAD_REQUEST",
+						"Description": "We could not handle your request",
+						"Recoverable": false,
+						"Details":     "The request contains a bad payload",
+					},
+				},
+			},
+		})
+	}
+
+	// Check if the request body is empty
+	if Trace == nil || (Trace.TxnID == "" && Trace.Type == "") {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"Errors": fiber.Map{
+				"Error": []fiber.Map{
+					{
+						"Source":      "TRACE_FINANCIAL_CRIME",
+						"ReasonCode":  "BAD_REQUEST",
+						"Description": "We could not handle your request",
+						"Recoverable": false,
+						"Details":     "The request body is empty",
+					},
+				},
+			},
+		})
+	}
+
+	expectedAlertID := "2b588f38d1bc40bf85fc91397bc98465"
+
+	// Handle permission denied error
+	if Trace.TxnID != expectedAlertID {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"Errors": fiber.Map{
+				"Error": []fiber.Map{
+					{
+						"Source":      "Gateway",
+						"ReasonCode":  "PERMISSION_DENIED",
+						"Description": "Invalid customer for third party",
+						"Recoverable": false,
+						"Details":     nil,
+					},
+				},
+			},
+		})
+	}
+
+	// Construct the response body
+	response := &payload.TraceResponse{
+		ID:        "e99a18c428cb38d5f260853678922e03",
+		Time:      time.Now().UTC(),
+		NetworkID: expectedAlertID,
+		TransactionAlerts: []payload.TransactionAlert{
+			{
+
+				ID:             "e99a18c428cb38d5f260853678922e03",
+				TxnID:          expectedAlertID,
+				NetworkAlertID: "e99a18c428cb38d5f260853678922e03",
+				NetworkID:      expectedAlertID,
+				Time:           time.Now().UTC(),
+				TxnTime:        time.Now().UTC(),
+				SourceID:       "GB98MIDL07009312345678",
+				DestID:         "GB98MIDL07009312345678",
+				SourceBankID:   "DEUTDEFF",
+				SourceBankName: "Barclays",
+				DestBankID:     "DEUTDEFF",
+				DestBankName:   "Lloyds",
+				Value:          10034,
+			},
+		},
+		AccountAlerts: []payload.AccountAlert{
+			{
+				ID:             "e99a18c428cb38d5f260853678922e03",
+				NetworkAlertID: "e99a18c428cb38d5f260853678922e03",
+				AccountID:      "GB98MIDL07009312345678",
+				NetworkID:      "2b588f38-d1bc-40bf-85fc-91397bc98465",
+				OwningBankID:   "DEUTDEFF",
+				OwningBankName: "OwningBank",
+				Time:           time.Now().UTC(),
+			},
+		},
+		VizURL:             "https://api.fcs.uk.mastercard.com/trace/financialcrime/viz/d41d8cd98f00b204e9800998ecf8427e",
+		SourceTxnID:        "2b588f38-d1bc-40bf-85fc-91397bc98465",
+		SourceTxnType:      "FRAUD",
+		Length:             20,
+		Generations:        3,
+		TotalValue:         10034,
+		SourceValue:        10034,
+		UniqueAccounts:     16,
+		MeanDwellTime:      "P3Y6M4DT12H30M5S",
+		MedianDwellTime:    "P3Y6M4DT12H30M5S",
+		MeanMuleScore:      0.845,
+		ElapsedTime:        "P3Y6M4DT12H30M5S",
+		NumActionedMules:   2,
+		NumLegitimate:      7,
+		NumNotInvestigated: 3,
+		ParentAlertID:      "e99a18c428cb38d5f260853678922e03",
+		DecisionDate:       time.Now().UTC(),
+		MostRecentFeedback: "ACTIONED_MULE",
+	}
+
+	// Return the constructed response
+	return c.JSON(response)
+}
+
+func isValidCustomerForThirdParty(customerID string) bool {
+	// Example logic: Check if the customer ID is not empty.
+	return customerID != "fdsgfsd"
+}
+
+func checkRateLimit() bool {
+	// Replace this with your actual rate limit checking logic
+	// For example, compare the current request rate with the allowed rate
+	return false // Adjust this based on your logic
+}
+func Feedback6(c *fiber.Ctx) error {
+	accountArray := &payload.RequestBodyArray{}
+
+	switch c.Method() {
+	case fiber.MethodPost:
+		// Check rate limit
+		if checkRateLimit() {
+			return c.Status(fiber.StatusTooManyRequests).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "Gateway",
+						ReasonCode:  "RATE_LIMIT_EXCEEDED",
+						Description: "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
+						Recoverable: true,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Parse the request body
+		if parsErr := c.BodyParser(accountArray); parsErr != nil {
+			return c.Status(fiber.StatusUnprocessableEntity).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "UNPROCESSABLE_ENTITY",
+						Description: "Expects a single JSON object and not an array",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Check if the array is empty
+		if len(accountArray.Items) == 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "BAD_REQUEST",
+						Description: "The request body is expecting an array",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Assuming you want to process the first item in the array
+		account := accountArray.Items[0]
+
+		// Check if the Alert ID matches the specified entity
+		if account.AlertID != "2b588f38d1bc40bf85fc91397bc98465" {
+			return c.Status(fiber.StatusConflict).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "CONFLICT",
+						Description: "Alert ID does not match the specified entity",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Check if the customer is valid for the third party
+		if !isValidCustomerForThirdParty(account.CustomerID) {
+			return c.Status(fiber.StatusForbidden).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "Gateway",
+						ReasonCode:  "PERMISSION_DENIED",
+						Description: "Invalid customer for third party",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Simulate feedback ID generation (replace this with your actual logic)
+		feedbackID := "2b588f38d1bc40bf85fc91397bc98465"
+
+		// Return success response with feedbackID
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"feedbackID": feedbackID,
+		})
+
+	case fiber.MethodGet, fiber.MethodPut, fiber.MethodDelete:
+		// Handle other methods
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"Source":      "Gateway",
+			"ReasonCode":  "NOT_FOUND",
+			"Description": "URL not found",
+			"Recoverable": false,
+			"Details":     nil,
+		})
+
+	default:
+		// Handle unsupported methods
+		log.Printf("Unsupported method: %s for endpoint: %s\n", c.Method(), c.OriginalURL())
+		return c.Status(fiber.StatusMethodNotAllowed).JSON(payload.ErrorResponses{
+			Errors: struct {
+				Error []payload.ErrorDetail `json:"Error"`
+			}{
+				Error: []payload.ErrorDetail{{
+					Source:      "FEEDBACK_FINANCIAL_CRIME",
+					ReasonCode:  "METHOD_NOT_ALLOWED",
+					Description: "Only POST method allowed",
+					Recoverable: false,
+					Details:     nil,
+				}},
+			},
+		})
+
+	}
 }

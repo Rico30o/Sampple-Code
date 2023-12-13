@@ -46,10 +46,10 @@ type (
 	// /////////////////////////
 	// /Another try again /////
 	Xample struct {
-		XMLName  xml.Name `xml:"xamplehead"`
-		Name     string   `xml:"name"`
-		Address  string   `xml:"address"`
-		Email    string   `xml:"email"`
+		XMLName  xml.Name `json:"xamplehead"`
+		Name     string   `json:"name"`
+		Address  string   `json:"address"`
+		Email    string   `json:"email"`
 		Employee Employee
 	}
 
@@ -257,7 +257,7 @@ type (
 
 	// AnotherTry represents the structure of the request body
 	AnotherTrys struct {
-		ID       uint   `json:"id"`
+		ID       int    `json:"id"`
 		Username string `json:"username"`
 	}
 	CreditTransferJSON struct {
@@ -367,5 +367,10 @@ type (
 		CreditCurrency         string  `json:"creditCurrency"`
 		AvalableBalance        string  `json:"availableBalance"`
 		ArNumber               string  `json:"arNumber"`
+	}
+	////Email
+	EmailRequest struct {
+		EmailRequest string `json:"emailRequest"`
+		Message      string `json:"message"`
 	}
 )

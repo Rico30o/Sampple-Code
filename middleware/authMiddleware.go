@@ -8,6 +8,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+const secretKey = "your-secret-key"
+
+// JWTMiddleware is a middleware function for handling JWT authentication.
 func JWTMiddleware() func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		token := c.Get("Authorization")
@@ -19,7 +22,7 @@ func JWTMiddleware() func(*fiber.Ctx) error {
 
 		claims := jwt.MapClaims{}
 		_, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("your-secret-key"), nil
+			return []byte(secretKey), nil
 		})
 
 		if err != nil {
@@ -33,21 +36,18 @@ func JWTMiddleware() func(*fiber.Ctx) error {
 	}
 }
 
-// JWTSecretKey is the secret key for signing the JWT token
-var JWTSecretKey = []byte("your-secret-key") // Change this to a secure secret key
+var JWTSecretKey = []byte(secretKey)
 
-// GenerateToken generates a new JWT token
-func GenerateToken(userID uint) (string, error) {
-	// Create the claims
+// GenerateToken generates a new JWT token for the given user ID and role.
+func GenerateToken(userID uint, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"userID": userID,
+		"role":   role,
 		"exp":    time.Now().Add(time.Hour * 24).Unix(), // Token expires in 24 hours
 	}
 
-	// Create the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Sign the token with the secret key
 	tokenString, err := token.SignedString(JWTSecretKey)
 	if err != nil {
 		return "", err
@@ -56,9 +56,8 @@ func GenerateToken(userID uint) (string, error) {
 	return tokenString, nil
 }
 
-// ParseToken parses and verifies a JWT token
+// ParseToken parses and verifies a JWT token.
 func ParseToken(tokenString string) (*jwt.Token, error) {
-	// Parse the token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return JWTSecretKey, nil
 	})
@@ -67,16 +66,15 @@ func ParseToken(tokenString string) (*jwt.Token, error) {
 		return nil, err
 	}
 
+	if !token.Valid {
+		return nil, jwt.ErrSignatureInvalid
+	}
+
 	return token, nil
 }
 
-// Authorization middleware function
+// Authorization is a middleware function for token-based authorization.
 func Authorization(c *fiber.Ctx) error {
-
-	// Perform your token-based authentication logic here
-	// Check if the request contains a valid token
-
-	// Example: Check if the request contains a "Bearer" token
 	tokenString := c.Get("Authorization")
 	if tokenString == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -84,16 +82,33 @@ func Authorization(c *fiber.Ctx) error {
 		})
 	}
 
-	// Parse and verify the token
 	token, err := ParseToken(tokenString)
-	if err != nil || !token.Valid {
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Invalid token signature",
+			})
+		}
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid token",
 		})
 	}
 
-	// If authenticated, proceed to the next middleware/handler
-	// If not authenticated, return an error response or redirect
+	// Check for role claim
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid token claims",
+		})
+	}
 
-	return c.Next()
+	// Check if the user has the required role (e.g., "admin")
+	if role, ok := claims["role"].(string); ok && role == "admin" {
+		c.Locals("user", claims)
+		return c.Next()
+	}
+
+	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+		"error": "Insufficient permissions",
+	})
 }

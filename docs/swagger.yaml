@@ -43,6 +43,13 @@ definitions:
       username:
         type: string
     type: object
+  models.EmailRequest:
+    properties:
+      emailRequest:
+        type: string
+      message:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       error:
@@ -82,7 +89,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Success
           schema:
             $ref: '#/definitions/models.AnotherTry'
         "400":
@@ -140,9 +147,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
-      security:
-      - ApiKeyAuth: []
       summary: Creating Token
+      tags:
+      - Generate TOKEN
   /get-instructionID:
     post:
       description: Get an instruction by its reference ID
@@ -171,7 +178,33 @@ paths:
             type: string
       summary: Get Instruction by Reference ID
       tags:
-      - IPS
+      - GetInstructionID
+  /send-email:
+    post:
+      consumes:
+      - application/json
+      operationId: Post-send-email
+      parameters:
+      - description: JSON request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EmailRequest'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: send email
+      tags:
+      - Send Email
   /update/{id}:
     put:
       consumes:

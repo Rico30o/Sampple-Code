@@ -23,7 +23,6 @@ type (
 		AdminFee         float64 `json:"adminFee"`
 		Description      string  `json:"description"`
 	}
-
 	TransferCreditResponse struct {
 		ResponseCode           string  `json:"responseCode"`
 		Description            string  `json:"description"`
@@ -33,7 +32,7 @@ type (
 		AccountName            string  `json:"accountName"`
 		ReferenceNumber        string  `json:"referenceNumber"`
 		Amount                 float64 `json:"amount"`
-		AdminFee               string  `json:"adminFee"`
+		AdminFee               string  `json:"adminFee"` // Change the data type to string
 		Reff                   string  `json:"reff"`
 		CoreReference          string  `json:"coreReference"`
 		SourceBranchCode       string  `json:"sourceBranchCode"`
@@ -45,6 +44,7 @@ type (
 		AvalableBalance        string  `json:"availableBalance"`
 		ArNumber               string  `json:"arNumber"`
 	}
+
 	TransferCredits struct {
 		ResponseCode           string  `json:"responseCode"`
 		Description            string  `json:"description"`
@@ -65,5 +65,24 @@ type (
 		CreditCurrency         string  `json:"creditCurrency"`
 		AvalableBalance        string  `json:"availableBalance"`
 		ArNumber               string  `json:"arNumber"`
+	}
+)
+type (
+	FeedbackRequest struct {
+		AccountNumber string `json:"accountNumber"`
+		Feedback      string `json:"feedback"`
+	}
+	FeedbackResponse struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+)
+
+///////// sapmle request alert ACcount /////
+
+type (
+	Feedback struct {
+		AlertID  string `json:"alert_id"`
+		Feedback string `json:"feedback"`
 	}
 )

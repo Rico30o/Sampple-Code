@@ -44,7 +44,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Success",
                         "schema": {
                             "$ref": "#/definitions/models.AnotherTry"
                         }
@@ -100,16 +100,14 @@ const docTemplate = `{
         },
         "/generate-token": {
             "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Generate TOKEN"
                 ],
                 "summary": "Creating Token",
                 "operationId": "Get-Token",
@@ -147,7 +145,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "IPS"
+                    "GetInstructionID"
                 ],
                 "summary": "Get Instruction by Reference ID",
                 "operationId": "get-GetInstructionID",
@@ -179,6 +177,46 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/send-email": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Send Email"
+                ],
+                "summary": "send email",
+                "operationId": "Post-send-email",
+                "parameters": [
+                    {
+                        "description": "JSON request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.EmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.EmailRequest"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -299,6 +337,17 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.EmailRequest": {
+            "type": "object",
+            "properties": {
+                "emailRequest": {
+                    "type": "string"
+                },
+                "message": {
                     "type": "string"
                 }
             }
