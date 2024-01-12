@@ -107,7 +107,7 @@ func ShowUserIdHandler(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.User
 	db.DB.Find(&user, id)
-	return c.XML(user)
+	return c.JSON(user)
 
 }
 
@@ -1572,13 +1572,13 @@ func Email(c *fiber.Ctx) error {
 		"Subject:  A Special Message Just for You\r\n\r\n" +
 		body
 
-		// 		// Insert data into the database
-		// 	result := db.DB.Debug().Exec(`
-		// INSERT INTO Email ("emailRequest", "message")
-		// VALUES (?, ?)`,
-		// 		request.EmailRequest,
-		// 		request.Message,
-		// 	)
+		// Insert data into the database
+	// result := db.DB.Debug().Exec(`
+	// 	INSERT INTO Email ("emailRequest", "message")
+	// 	VALUES (?, ?)`,
+	// 	request.EmailRequest,
+	// 	request.Message,
+	// )
 
 	// if result.Error != nil {
 	// 	// Handle the error if the database query fails
@@ -1864,9 +1864,151 @@ func FeedbackId(c *fiber.Ctx) error {
 // 	})
 // }
 
+func isValidCustomerForThirdParty(customerID string) bool {
+	// Example logic: Check if the customer ID is not empty.
+	return customerID != "fdsgfsd"
+}
+
+func checkRateLimit() bool {
+	// Replace this with your actual rate limit checking logic
+	// For example, compare the current request rate with the allowed rate
+	return false // Adjust this based on your logic
+}
+func Feedback6(c *fiber.Ctx) error {
+	accountArray := &payload.RequestBodyArray{}
+
+	switch c.Method() {
+	case fiber.MethodPost:
+		// Check rate limit
+		if checkRateLimit() {
+			return c.Status(fiber.StatusTooManyRequests).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "Gateway",
+						ReasonCode:  "RATE_LIMIT_EXCEEDED",
+						Description: "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
+						Recoverable: true,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Parse the request body
+		if parsErr := c.BodyParser(accountArray); parsErr != nil {
+			return c.Status(fiber.StatusUnprocessableEntity).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "UNPROCESSABLE_ENTITY",
+						Description: "Expects a single JSON object and not an array",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Check if the array is empty
+		if len(accountArray.Items) == 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "BAD_REQUEST",
+						Description: "The request body is expecting an array",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Assuming you want to process the first item in the array
+		account := accountArray.Items[0]
+
+		// Check if the Alert ID matches the specified entity
+		if account.AlertID != "2b588f38d1bc40bf85fc91397bc98465" {
+			return c.Status(fiber.StatusConflict).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "FEEDBACK_FINANCIAL_CRIME",
+						ReasonCode:  "CONFLICT",
+						Description: "Alert ID does not match the specified entity",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Check if the customer is valid for the third party
+		if !isValidCustomerForThirdParty(account.CustomerID) {
+			return c.Status(fiber.StatusForbidden).JSON(payload.ErrorResponses{
+				Errors: struct {
+					Error []payload.ErrorDetail `json:"Error"`
+				}{
+					Error: []payload.ErrorDetail{{
+						Source:      "Gateway",
+						ReasonCode:  "PERMISSION_DENIED",
+						Description: "Invalid customer for third party",
+						Recoverable: false,
+						Details:     nil,
+					}},
+				},
+			})
+		}
+
+		// Simulate feedback ID generation (replace this with your actual logic)
+		feedbackID := "2b588f38d1bc40bf85fc91397bc98465"
+
+		// Return success response with feedbackID
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"feedbackID": feedbackID,
+		})
+
+	case fiber.MethodGet, fiber.MethodPut, fiber.MethodDelete:
+		// Handle other methods
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"Source":      "Gateway",
+			"ReasonCode":  "NOT_FOUND",
+			"Description": "URL not found",
+			"Recoverable": false,
+			"Details":     nil,
+		})
+
+	default:
+		// Handle unsupported methods
+		log.Printf("Unsupported method: %s for endpoint: %s\n", c.Method(), c.OriginalURL())
+		return c.Status(fiber.StatusMethodNotAllowed).JSON(payload.ErrorResponses{
+			Errors: struct {
+				Error []payload.ErrorDetail `json:"Error"`
+			}{
+				Error: []payload.ErrorDetail{{
+					Source:      "FEEDBACK_FINANCIAL_CRIME",
+					ReasonCode:  "METHOD_NOT_ALLOWED",
+					Description: "Only POST method allowed",
+					Recoverable: false,
+					Details:     nil,
+				}},
+			},
+		})
+
+	}
+}
+
 var limiter = rate.NewLimiter(rate.Limit(1), 10) // Allow 10 requests per second
 
 func Trace(c *fiber.Ctx) error {
+
 	// Check rate limit
 	if limiter.Allow() == false {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
@@ -2012,145 +2154,5 @@ func Trace(c *fiber.Ctx) error {
 
 	// Return the constructed response
 	return c.JSON(response)
-}
 
-func isValidCustomerForThirdParty(customerID string) bool {
-	// Example logic: Check if the customer ID is not empty.
-	return customerID != "fdsgfsd"
-}
-
-func checkRateLimit() bool {
-	// Replace this with your actual rate limit checking logic
-	// For example, compare the current request rate with the allowed rate
-	return false // Adjust this based on your logic
-}
-func Feedback6(c *fiber.Ctx) error {
-	accountArray := &payload.RequestBodyArray{}
-
-	switch c.Method() {
-	case fiber.MethodPost:
-		// Check rate limit
-		if checkRateLimit() {
-			return c.Status(fiber.StatusTooManyRequests).JSON(payload.ErrorResponses{
-				Errors: struct {
-					Error []payload.ErrorDetail `json:"Error"`
-				}{
-					Error: []payload.ErrorDetail{{
-						Source:      "Gateway",
-						ReasonCode:  "RATE_LIMIT_EXCEEDED",
-						Description: "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
-						Recoverable: true,
-						Details:     nil,
-					}},
-				},
-			})
-		}
-
-		// Parse the request body
-		if parsErr := c.BodyParser(accountArray); parsErr != nil {
-			return c.Status(fiber.StatusUnprocessableEntity).JSON(payload.ErrorResponses{
-				Errors: struct {
-					Error []payload.ErrorDetail `json:"Error"`
-				}{
-					Error: []payload.ErrorDetail{{
-						Source:      "FEEDBACK_FINANCIAL_CRIME",
-						ReasonCode:  "UNPROCESSABLE_ENTITY",
-						Description: "Expects a single JSON object and not an array",
-						Recoverable: false,
-						Details:     nil,
-					}},
-				},
-			})
-		}
-
-		// Check if the array is empty
-		if len(accountArray.Items) == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(payload.ErrorResponses{
-				Errors: struct {
-					Error []payload.ErrorDetail `json:"Error"`
-				}{
-					Error: []payload.ErrorDetail{{
-						Source:      "FEEDBACK_FINANCIAL_CRIME",
-						ReasonCode:  "BAD_REQUEST",
-						Description: "The request body is expecting an array",
-						Recoverable: false,
-						Details:     nil,
-					}},
-				},
-			})
-		}
-
-		// Assuming you want to process the first item in the array
-		account := accountArray.Items[0]
-
-		// Check if the Alert ID matches the specified entity
-		if account.AlertID != "2b588f38d1bc40bf85fc91397bc98465" {
-			return c.Status(fiber.StatusConflict).JSON(payload.ErrorResponses{
-				Errors: struct {
-					Error []payload.ErrorDetail `json:"Error"`
-				}{
-					Error: []payload.ErrorDetail{{
-						Source:      "FEEDBACK_FINANCIAL_CRIME",
-						ReasonCode:  "CONFLICT",
-						Description: "Alert ID does not match the specified entity",
-						Recoverable: false,
-						Details:     nil,
-					}},
-				},
-			})
-		}
-
-		// Check if the customer is valid for the third party
-		if !isValidCustomerForThirdParty(account.CustomerID) {
-			return c.Status(fiber.StatusForbidden).JSON(payload.ErrorResponses{
-				Errors: struct {
-					Error []payload.ErrorDetail `json:"Error"`
-				}{
-					Error: []payload.ErrorDetail{{
-						Source:      "Gateway",
-						ReasonCode:  "PERMISSION_DENIED",
-						Description: "Invalid customer for third party",
-						Recoverable: false,
-						Details:     nil,
-					}},
-				},
-			})
-		}
-
-		// Simulate feedback ID generation (replace this with your actual logic)
-		feedbackID := "2b588f38d1bc40bf85fc91397bc98465"
-
-		// Return success response with feedbackID
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"feedbackID": feedbackID,
-		})
-
-	case fiber.MethodGet, fiber.MethodPut, fiber.MethodDelete:
-		// Handle other methods
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"Source":      "Gateway",
-			"ReasonCode":  "NOT_FOUND",
-			"Description": "URL not found",
-			"Recoverable": false,
-			"Details":     nil,
-		})
-
-	default:
-		// Handle unsupported methods
-		log.Printf("Unsupported method: %s for endpoint: %s\n", c.Method(), c.OriginalURL())
-		return c.Status(fiber.StatusMethodNotAllowed).JSON(payload.ErrorResponses{
-			Errors: struct {
-				Error []payload.ErrorDetail `json:"Error"`
-			}{
-				Error: []payload.ErrorDetail{{
-					Source:      "FEEDBACK_FINANCIAL_CRIME",
-					ReasonCode:  "METHOD_NOT_ALLOWED",
-					Description: "Only POST method allowed",
-					Recoverable: false,
-					Details:     nil,
-				}},
-			},
-		})
-
-	}
 }
