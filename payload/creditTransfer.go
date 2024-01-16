@@ -2,6 +2,21 @@ package payload
 
 import "time"
 
+// Trace- Netweork Alert ID//
+
+type (
+	NetworkAlertID struct {
+		Network_alert_id string `json:"network_alert_id"`
+		Format           string `json:"format"`
+		Width            int64  `json:"wiidth"`
+		Height           int64  `json:"height"`
+		Legend           bool   `json:"legend"`
+		Type             string `json:"type"`
+		Colour_Mode      string `json:"Colour_Mode"`
+		// SomeData         string `json:"somedata"`
+	}
+)
+
 type (
 	CreditTransferJSON struct {
 		TransactionType     string  `json:"transactionType"`
