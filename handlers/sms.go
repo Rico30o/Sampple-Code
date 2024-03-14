@@ -24,12 +24,14 @@ func SendSMS(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
 	}
 
-	Connection := "http://192.168.0.110:8000/api/public/v1/message/broadcast"
+	Connection := "http://192.168.0.113:8000/api/public/v1/message/broadcast"
 
 	// Create HTTP request
-	req, err := http.NewRequest("POST", Connection, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequest(http.MethodPost, Connection, bytes.NewBuffer(payloadJSON))
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error"})
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create the HTTP request",
+		})
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -53,6 +55,7 @@ func SendSMS(c *fiber.Ctx) error {
 
 	// Check the HTTP status code
 	if resp.StatusCode != http.StatusOK {
+
 		return c.Status(resp.StatusCode).JSON(fiber.Map{
 			"error":   "Request failed with status code " + strconv.Itoa(resp.StatusCode),
 			"details": string(body),
@@ -66,8 +69,8 @@ func SendSMS(c *fiber.Ctx) error {
 		})
 	}
 	response := struct {
-		Message string                     `json:"message"`
-		Header  http.Header                `json:"header"`
+		Message string                     ` json:"message"`
+		Header  http.Header                ` json:"header"`
 		Data    igateModel.MessageResponse `json:"data"`
 	}{
 		Message: "success",

@@ -27,7 +27,6 @@ import (
 
 	"github.com/JohnRebellion/go-utils/database"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/time/rate"
 )
 
 func Add(c *fiber.Ctx) error {
@@ -884,7 +883,7 @@ func CreditsTransfer(c *fiber.Ctx) error {
 		"response":       response,
 	})
 }
-func secureEndpoint(c *fiber.Ctx) error {
+func SecureEndpoint(c *fiber.Ctx) error {
 	// Handle the secure endpoint here
 	return c.JSON(fiber.Map{
 		"message": "You are authorized to access this endpoint!",
@@ -2005,26 +2004,26 @@ func Feedback6(c *fiber.Ctx) error {
 	}
 }
 
-var limiter = rate.NewLimiter(rate.Limit(1), 10) // Allow 10 requests per second
+// var limiter = rate.NewLimiter(rate.Limit(1), 10) // Allow 10 requests per second
 
 func Trace(c *fiber.Ctx) error {
 
-	// Check rate limit
-	if limiter.Allow() == false {
-		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-			"Errors": fiber.Map{
-				"Error": []fiber.Map{
-					{
-						"Source":      "Gateway",
-						"ReasonCode":  "RATE_LIMIT_EXCEEDED",
-						"Description": "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
-						"Recoverable": true,
-						"Details":     nil,
-					},
-				},
-			},
-		})
-	}
+	// // Check rate limit
+	// if limiter.Allow() == false {
+	// 	return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+	// 		"Errors": fiber.Map{
+	// 			"Error": []fiber.Map{
+	// 				{
+	// 					"Source":      "Gateway",
+	// 					"ReasonCode":  "RATE_LIMIT_EXCEEDED",
+	// 					"Description": "You have exceeded the service rate limit. Maximum allowed: ${rate_limit.output} TPS",
+	// 					"Recoverable": true,
+	// 					"Details":     nil,
+	// 				},
+	// 			},
+	// 		},
+	// 	})
+	// }
 	// Check if the request method is not POST
 	if c.Method() != fiber.MethodPost {
 		return c.Status(fiber.StatusMethodNotAllowed).JSON(fiber.Map{
