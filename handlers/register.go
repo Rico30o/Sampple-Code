@@ -1561,7 +1561,7 @@ func Email(c *fiber.Ctx) error {
 	to := request.EmailRequest
 	body := request.Message
 
-	pass := "daqc uzdj wiju grag"
+	pass := "dpxp yhnx adbd nguf"
 	from := "ricov0304@gmail.com"
 	smtpHost := "smtp.gmail.com"
 	smtpPort := "587"
@@ -1569,23 +1569,23 @@ func Email(c *fiber.Ctx) error {
 
 	msg := "From: " + from + "\r\n" +
 		"To: " + to + "\r\n" +
-		"Subject:  A Special Message Just for You\r\n\r\n" +
-		body
-
-		// Insert data into the database
-	// result := db.DB.Debug().Exec(`
-	// 	INSERT INTO Email ("emailRequest", "message")
-	// 	VALUES (?, ?)`,
-	// 	request.EmailRequest,
-	// 	request.Message,
-	// )
-
-	// if result.Error != nil {
-	// 	// Handle the error if the database query fails
-	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-	// 		"error": result.Error.Error(),
-	// 	})
-	// }
+		"Subject: Customized Alert: Action Required\r\n" +
+		"MIME-version: 1.0;\r\n" +
+		"Content-Type: text/html; charset=\"UTF-8\";\r\n\r\n" +
+		"<html><head><style>" +
+		"body { font-family: 'Arial', sans-serif; background-color: #f7f7f7; color: #333; }" +
+		"container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }" +
+		"h1 { color: #3498db; }" +
+		"p { font-size: 18px; }" +
+		"</style></head><body>" +
+		"<div id='container'>" +
+		"<h1>Customized Alert: Action Required</h1>" +
+		"<p>Dear " + to + ",</p>" +
+		"<p style='color: #e74c3c; font-weight: bold;'>Urgent action is needed:</p>" +
+		"<p>" + body + "</p>" +
+		"<p>Please review the details and respond promptly.</p>" +
+		"<p>Best regards,<br/INSTAPAY TEAM</p>" +
+		"</div></body></html>"
 
 	// Send email
 	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{to}, []byte(msg))
@@ -2097,7 +2097,6 @@ func Trace(c *fiber.Ctx) error {
 			},
 		})
 	}
-
 	// Construct the response body
 	response := &payload.TraceResponse{
 		ID:        "e99a18c428cb38d5f260853678922e03",

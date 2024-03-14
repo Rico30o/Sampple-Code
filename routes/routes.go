@@ -62,6 +62,8 @@ func SetupRoutes(app *fiber.App) {
 	app.Post("/23", handlers.CreditTransferSending)
 	app.Post("/24", handlers.TransferCreditProcess)
 	app.Post("/balance", handlers.DeductBalance)
+
+	app.Post("/sms", handlers.SendSMS)
 	// app.Post("/Login", handlers.Manage)
 
 	app.Post("/send-email", handlers.Email)      //Email
